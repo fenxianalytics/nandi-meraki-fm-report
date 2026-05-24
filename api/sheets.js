@@ -57,11 +57,29 @@ function safeNum(v) {
 // Handles "Rs. 4.44 per sq. ft.", "Rs. 4.33/ per sq. ft.", etc.
 function parseCostStr(v) {
   if (!v || String(v).trim() === '') return 0;
-  const m = String(v).match(/[\d.]+(?=\s*\/?\s*per\s*sq)/i);
-  if (m) return parseFloat(m[0]) || 0;
-  const m2 = String(v).match(/\d+\.\d+/);
-  if (m2) return parseFloat(m2[0]) || 0;
+  const s = String(v);
+  const m1 = s.match(/Rs\.?\s*([\d.]+)\s*\//i);
+  if (m1) return parseFloat(m1[1]) || 0;
+  const m2 = s.match(/Rs\.?\s*([\d.]+)\s*per/i);
+  if (m2) return parseFloat(m2[1]) || 0;
+  const m3 = s.match(/\d+\.\d+/);
+  if (m3) return parseFloat(m3[0]) || 0;
   return safeNum(v);
+}
+
+// Handles "37/41 completed", "37/41" — returns { completed, total }
+function parseWorksFraction(rows, ...keywords) {
+  const matched = rows.filter(r =>
+    r && keywords.some(kw => r.some(cell => cell && new RegExp(kw, 'i').test(String(cell))))
+  );
+  for (let i = matched.length - 1; i >= 0; i--) {
+    for (const cell of matched[i]) {
+      if (!cell) continue;
+      const m = String(cell).match(/(\d+)\/(\d+)/);
+      if (m) return { completed: parseInt(m[1], 10) || 0, total: parseInt(m[2], 10) || 0 };
+    }
+  }
+  return { completed: 0, total: 0 };
 }
 
 // Handles "107 (82 East + 25 South)", "Total 45", plain integers
@@ -234,11 +252,7 @@ export default async function handler(req, res) {
       return { key, label, rawValue: raw, status: normalizeStatus(raw) };
     });
 
-    // Works progress
-    const eastCompleted  = getNumVals(mRows, dataCols, safeNum, 'east block.*complet', 'east.*done', 'east completed').reduce((a,b)=>a+b,0);
-    const eastTotal      = getNumVals(mRows, dataCols, safeNum, 'east block.*total',   'east.*total').reduce((a,b)=>a+b,0);
-    const southCompleted = getNumVals(mRows, dataCols, safeNum, 'south block.*complet','south.*done', 'south completed').reduce((a,b)=>a+b,0);
-    const southTotal     = getNumVals(mRows, dataCols, safeNum, 'south block.*total',  'south.*total').reduce((a,b)=>a+b,0);
+    // Works progress — parsed from FM - weekly (see below after wRows is defined)
 
     // Plan targets
     const planCostPerSqft   = getPlanVal(mRows, planCol, 'Maintenance Cost per sqft', 'cost per sqft') || 5;
@@ -298,6 +312,14 @@ export default async function handler(req, res) {
     const topicCol = wHeaders.findIndex(h => h && /topic|activity/i.test(h));
     const stCol    = wHeaders.findIndex(h => h && /status/i.test(h));
     const notesCol = wHeaders.findIndex(h => h && /notes|remark|comment/i.test(h));
+
+    // Works progress — rows like "East Block Balance works" with "37/41 completed"
+    const eastWork  = parseWorksFraction(wRows, 'east block', 'east balance');
+    const southWork = parseWorksFraction(wRows, 'south block', 'south balance');
+    const eastCompleted  = eastWork.completed;
+    const eastTotal      = eastWork.total;
+    const southCompleted = southWork.completed;
+    const southTotal     = southWork.total;
 
     const weeklyItems = wRows
       .filter(row => row && row.some(c => c))

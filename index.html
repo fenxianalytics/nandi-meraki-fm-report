@@ -176,17 +176,9 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
 .memo-point-label{font-size:clamp(7px,0.58vw,9px);font-weight:700;color:var(--maroon);text-transform:uppercase;letter-spacing:2px;margin-bottom:3px;}
 .memo-point-text{font-size:clamp(9px,0.72vw,11.5px);color:var(--text-dark);line-height:1.8;}
 
-/* ── LOADING SKELETON ── */
-.skeleton{display:none;width:100%;border-radius:var(--slide-radius);overflow:hidden;background:rgba(20,8,6,0.6);box-shadow:0 40px 120px rgba(0,0,0,0.8);min-height:calc((100vw - 40px)*9/16);position:relative;}
-.skeleton.active{display:block;}
-@keyframes pulse{0%,100%{opacity:0.4;}50%{opacity:0.7;}}
-.skel-bar{background:rgba(122,26,20,0.3);border-radius:4px;animation:pulse 1.5s ease-in-out infinite;}
-.skel-header{height:44px;background:rgba(122,26,20,0.4);margin-bottom:16px;}
-.skel-body{padding:16px 24px;display:flex;flex-direction:column;gap:14px;}
-.skel-row{display:flex;gap:12px;}
-.skel-card{flex:1;height:90px;background:rgba(255,255,255,0.06);border-radius:6px;animation:pulse 1.5s ease-in-out infinite;}
-.skel-chart{flex:1.4;height:160px;background:rgba(255,255,255,0.06);border-radius:6px;animation:pulse 1.5s ease-in-out infinite;}
-.skel-side{flex:1;height:160px;background:rgba(255,255,255,0.06);border-radius:6px;animation:pulse 1.5s ease-in-out infinite;}
+/* ── LOADING OVERLAY ── */
+.loading-spinner{width:44px;height:44px;border:3px solid rgba(122,26,20,0.25);border-top-color:var(--maroon);border-radius:50%;animation:spin 0.85s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
 /* ── DOT NAV ── */
 .dot-nav{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:100;}
@@ -212,6 +204,13 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
 </head>
 <body>
 
+<!-- ── FULL-PAGE LOADING OVERLAY ── -->
+<div id="loadingOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,3,2,0.97);flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+  <div class="loading-spinner"></div>
+  <div id="loadingMsg" style="color:rgba(255,255,255,0.75);font-size:13px;font-weight:500;letter-spacing:0.3px;">Fetching sheet data…</div>
+  <div style="color:rgba(255,255,255,0.22);font-size:10px;letter-spacing:3px;text-transform:uppercase;">Nandi Meraki · FM Report</div>
+</div>
+
 <div class="chart-tooltip" id="globalTooltip"></div>
 
 <!-- ── NAV ── -->
@@ -219,7 +218,7 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
   <span class="nav-brand">Nandi Meraki &nbsp;·&nbsp; FM Report</span>
   <div class="nav-controls">
     <button class="nav-btn" onclick="prevSlide()">← Prev</button>
-    <span class="slide-counter" id="counter">1 / 8</span>
+    <span class="slide-counter" id="counter">— / —</span>
     <button class="nav-btn" onclick="nextSlide()">Next →</button>
     <button class="nav-btn" onclick="window.print()">↓ PDF</button>
   </div>
@@ -250,23 +249,6 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
 <!-- ── SLIDES WRAPPER ── -->
 <div class="slides-wrapper" id="slidesWrapper">
 
-  <!-- LOADING SKELETON -->
-  <div class="skeleton" id="skeleton">
-    <div class="skel-header skel-bar"></div>
-    <div class="skel-body">
-      <div class="skel-row">
-        <div class="skel-card skel-bar"></div>
-        <div class="skel-card skel-bar"></div>
-        <div class="skel-card skel-bar"></div>
-        <div class="skel-card skel-bar"></div>
-      </div>
-      <div class="skel-row">
-        <div class="skel-chart skel-bar"></div>
-        <div class="skel-side skel-bar"></div>
-      </div>
-    </div>
-  </div>
-
   <!-- SLIDE 1: COVER -->
   <div class="slide slide-cover" id="slide-1">
     <div class="cover-bg-pattern"></div>
@@ -291,12 +273,8 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
       <span class="slide-header-tag" id="s2tag">FM Performance Review</span>
     </div>
     <div class="slide-body">
-      <div class="scorecard-grid" id="scorecardGrid">
-        <!-- Filled by JS -->
-      </div>
-      <div class="kpi-chips" id="kpiChips">
-        <!-- Filled by JS -->
-      </div>
+      <div class="scorecard-grid" id="scorecardGrid"></div>
+      <div class="kpi-chips" id="kpiChips"></div>
     </div>
   </div>
 
@@ -439,17 +417,8 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
 
 </div><!-- /slides-wrapper -->
 
-<!-- DOT NAV -->
-<div class="dot-nav" id="dotNav">
-  <div class="dot active" onclick="showSlide(1)"></div>
-  <div class="dot" onclick="showSlide(2)"></div>
-  <div class="dot" onclick="showSlide(3)"></div>
-  <div class="dot" onclick="showSlide(4)"></div>
-  <div class="dot" onclick="showSlide(5)"></div>
-  <div class="dot" onclick="showSlide(6)"></div>
-  <div class="dot" onclick="showSlide(7)"></div>
-  <div class="dot" onclick="showSlide(8)"></div>
-</div>
+<!-- DOT NAV — rebuilt dynamically after each report -->
+<div class="dot-nav" id="dotNav"></div>
 
 <div class="progress-bar" id="progressBar"></div>
 
@@ -457,28 +426,63 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
 // ─────────────────────────────────────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────────────────────────────────────
-let currentSlide = 1;
-const TOTAL_SLIDES = 8;
+let currentSlideIndex = 0;
+let visibleSlides = [];
 let selectedPeriod = 'Q4 2025';
 let chartInstances = {};
 let currentData = null;
 let currentInsights = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SLIDE VISIBILITY
+// ─────────────────────────────────────────────────────────────────────────────
+function hasData(arr) {
+  return Array.isArray(arr) && arr.length > 0 && arr.some(v => v > 0);
+}
+
+function slideHasData(slideNum, data) {
+  if (!data) return slideNum === 1 || slideNum === 2 || slideNum === 8;
+  switch (slideNum) {
+    case 1: return true;
+    case 2: return true;
+    case 3: return hasData(data.maintenance?.costPerSqft) || (data.expenses?.categories?.length > 0);
+    case 4: return hasData(data.tickets?.received) || hasData(data.tickets?.closed) || (data.tickets?.categories?.length > 0);
+    case 5: return hasData(data.handover?.handedOver) || hasData(data.handover?.occupied) || (data.handover?.totalOccupied > 0);
+    case 6: return (data.sustainability?.length > 0);
+    case 7: return (data.works?.eastBlock?.total > 0) || (data.works?.southBlock?.total > 0) || (data.weekly?.length > 0);
+    case 8: return true;
+    default: return true;
+  }
+}
+
+function buildVisibleSlides(data) {
+  return [1, 2, 3, 4, 5, 6, 7, 8].filter(n => slideHasData(n, data));
+}
+
+function rebuildDotNav() {
+  document.getElementById('dotNav').innerHTML = visibleSlides.map((_, i) =>
+    `<div class="dot${i === currentSlideIndex ? ' active' : ''}" onclick="showSlideByIndex(${i})"></div>`
+  ).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SLIDE NAVIGATION
 // ─────────────────────────────────────────────────────────────────────────────
-function showSlide(n) {
-  n = Math.max(1, Math.min(n, TOTAL_SLIDES));
+function showSlideByIndex(idx) {
+  if (visibleSlides.length === 0) return;
+  idx = Math.max(0, Math.min(idx, visibleSlides.length - 1));
+  currentSlideIndex = idx;
+  const slideNum = visibleSlides[idx];
   document.querySelectorAll('.slide').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
-  const el = document.getElementById('slide-' + n);
+  const el = document.getElementById('slide-' + slideNum);
   if (el) { el.style.display = 'flex'; el.classList.add('active'); }
-  document.getElementById('counter').textContent = n + ' / ' + TOTAL_SLIDES;
-  document.getElementById('progressBar').style.width = ((n / TOTAL_SLIDES) * 100) + '%';
-  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === n - 1));
-  currentSlide = n;
+  document.getElementById('counter').textContent = (idx + 1) + ' / ' + visibleSlides.length;
+  document.getElementById('progressBar').style.width = ((idx + 1) / visibleSlides.length * 100) + '%';
+  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === idx));
 }
-function nextSlide() { showSlide(currentSlide + 1); }
-function prevSlide() { showSlide(currentSlide - 1); }
+
+function nextSlide() { showSlideByIndex(currentSlideIndex + 1); }
+function prevSlide() { showSlideByIndex(currentSlideIndex - 1); }
 
 document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextSlide();
@@ -495,14 +499,17 @@ function selectPeriod(btn) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SKELETON
+// LOADING OVERLAY
 // ─────────────────────────────────────────────────────────────────────────────
-function showSkeleton() {
+function showLoading(msg) {
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.style.display = 'flex';
+  if (msg) document.getElementById('loadingMsg').textContent = msg;
   document.querySelectorAll('.slide').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
-  document.getElementById('skeleton').classList.add('active');
 }
-function hideSkeleton() {
-  document.getElementById('skeleton').classList.remove('active');
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').style.display = 'none';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -519,10 +526,6 @@ Chart.defaults.color = '#9c7d78';
 
 function destroyChart(id) {
   if (chartInstances[id]) { try { chartInstances[id].destroy(); } catch(e){} delete chartInstances[id]; }
-}
-
-function hasData(arr) {
-  return Array.isArray(arr) && arr.length > 0 && arr.some(v => v > 0);
 }
 
 function clearChartWrap(id) {
@@ -566,10 +569,8 @@ function drawLineChart(wrapId, labels, datasets, opts = {}) {
         y: { grid: { color: '#f0ebe8' }, ticks: { font: { size: 10 }, callback: opts.yFmt || (v => v) },
           ...(opts.yMin !== undefined ? { min: opts.yMin } : {}) },
       },
-      ...( opts.annotations ? { plugins: { ...this?.options?.plugins, annotation: opts.annotations } } : {} ),
     },
   });
-  // Draw dashed goal line if requested
   if (opts.goalLine !== undefined) {
     const plugin = {
       id: 'goalLine_' + wrapId,
@@ -654,7 +655,6 @@ function fmtRupee(n) { return '₹' + fmt(n); }
 
 function renderSlide1(data, insights) {
   const period = data.period || selectedPeriod;
-  // Watermark: short version
   const wm = period.replace(' 2025','').replace(' 2026','');
   document.getElementById('coverWatermark').textContent = wm;
   document.getElementById('coverPeriodItalic').textContent = period;
@@ -663,7 +663,6 @@ function renderSlide1(data, insights) {
   const now = new Date();
   document.getElementById('coverGenDate').textContent = 'Generated ' + now.toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' }) + ' · ' + now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
 
-  // Stats row
   const rr = safe(data.tickets?.resolutionRate);
   const cpSqft = safe(data.maintenance?.avgCostPerSqft);
   const occ = safe(data.handover?.occupancyRate);
@@ -743,7 +742,6 @@ function renderSlide3(data, insights) {
   const avg     = safe(data.maintenance?.avgCostPerSqft);
   const goalLine = safe(data.maintenance?.goalLine, 5);
 
-  // KPI row
   const prevDiff = avg > 0 && goalLine > 0 ? ((avg - goalLine) / goalLine * 100).toFixed(0) : null;
   const cpsColor = avg > 0 && avg <= goalLine ? 'green' : avg <= goalLine * 1.2 ? 'amber' : 'red';
   document.getElementById('s3kpis').innerHTML = `
@@ -765,7 +763,6 @@ function renderSlide3(data, insights) {
     </div>
   `;
 
-  // Cost per sqft line chart
   if (hasData(cpSqft)) {
     drawLineChart('costChart', months, [{
       label: 'Cost/Sqft (₹)',
@@ -777,7 +774,6 @@ function renderSlide3(data, insights) {
     clearChartWrap('costChart');
   }
 
-  // Expense categories bar
   if (expCats.length > 0) {
     drawHBarChart('expenseChart', expCats.map(c => ({ label: c.name, value: c.amount })));
   } else {
@@ -824,7 +820,6 @@ function renderSlide4(data, insights) {
     </div>
   `;
 
-  // Grouped bar: received vs closed
   if (hasData(rcvd) || hasData(closed)) {
     drawBarChart('ticketChart', months, [
       { label: 'Received', data: rcvd, backgroundColor: CHART_COLORS.maroon },
@@ -834,7 +829,6 @@ function renderSlide4(data, insights) {
     clearChartWrap('ticketChart');
   }
 
-  // Category bar
   if (cats.length > 0) {
     drawHBarChart('ticketCatChart', cats.map(c => ({ label: c.name, value: c.count })));
   } else {
@@ -856,7 +850,6 @@ function renderSlide5(data, insights) {
 
   const occColor = occRate >= bench ? 'green' : occRate >= bench * 0.75 ? 'amber' : 'red';
 
-  // Update cards
   document.getElementById('s5occRate').textContent = occRate + '%';
   const occDelta = document.getElementById('s5occDelta');
   if (occRate >= bench) {
@@ -870,7 +863,6 @@ function renderSlide5(data, insights) {
   document.getElementById('s5totalOcc').textContent = fmt(totO);
   document.getElementById('s5handSub').textContent = totH > 0 ? 'of ' + fmt(totH) + ' handed over' : '';
 
-  // Grouped bar
   if (hasData(ho) || hasData(occ)) {
     drawBarChart('handoverChart', months, [
       { label: 'Handed Over', data: ho,  backgroundColor: CHART_COLORS.blue },
@@ -917,7 +909,7 @@ function renderSlide6(data, insights) {
     const si = insg[k];
     return (si?.status || s?.status) === 'Operational';
   }).length;
-  document.getElementById('s6insight').innerHTML = `<strong>Infrastructure:</strong> ${opCount} of ${SUSTAIN_KEYS.length} systems fully operational. ${safeStr(insights.slide7Insight && opCount < SUSTAIN_KEYS.length ? '' : '', '')}`;
+  document.getElementById('s6insight').innerHTML = `<strong>Infrastructure:</strong> ${opCount} of ${SUSTAIN_KEYS.length} systems fully operational.`;
 }
 
 function renderSlide7(data, insights) {
@@ -947,7 +939,6 @@ function renderSlide7(data, insights) {
   document.getElementById('eastWorks').innerHTML  = worksBlock(east,  'East Block');
   document.getElementById('southWorks').innerHTML = worksBlock(south, 'South Block');
 
-  // Weekly log
   const logEl = document.getElementById('weeklyLog');
   if (weekly.length === 0) {
     logEl.innerHTML = '<div style="color:var(--text-light);font-size:11px;font-style:italic;padding:8px;">No weekly updates for this period.</div>';
@@ -1007,17 +998,14 @@ function renderAllSlides(data, insights) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GENERATE REPORT
+// GENERATE REPORT — waits for both sheets + AI before revealing anything
 // ─────────────────────────────────────────────────────────────────────────────
 async function generateReport() {
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
   btn.textContent = 'Generating…';
 
-  showSkeleton();
-
-  let sheetData = null;
-  let insights = {
+  const fallbackInsights = {
     healthScore: 0, healthScoreTrend: '—',
     coverSummary: 'Data loaded — analysis unavailable.',
     goals: { met: [], partial: [], missed: [] },
@@ -1029,7 +1017,11 @@ async function generateReport() {
     memo: { point1:'—', point2:'—', point3:'—', point4:'—', point5:'—' },
   };
 
-  // Layer 1 — Sheets
+  let sheetData = null;
+  let insights = { ...fallbackInsights };
+
+  // Step 1 — fetch sheet data
+  showLoading('Fetching sheet data…');
   try {
     const resp = await fetch('/api/sheets?period=' + encodeURIComponent(selectedPeriod));
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -1038,7 +1030,7 @@ async function generateReport() {
     console.error('Sheets fetch error:', err);
     sheetData = {
       period: selectedPeriod, periodLabel: selectedPeriod, periodDates: selectedPeriod,
-      months: ['Jan','Feb','Mar'],
+      months: [],
       plan: { costPerSqft:5, ticketResolutionRate:85, occupancyRate:60 },
       maintenance: { costPerSqft:[], avgCostPerSqft:0, goalLine:5, invoicesSent:[] },
       expenses: { total:0, categories:[] },
@@ -1051,16 +1043,8 @@ async function generateReport() {
     };
   }
 
-  // Layer 2 — Haiku analysis (non-blocking — render data first)
-  hideSkeleton();
-  currentData = sheetData;
-  currentInsights = insights;
-  renderAllSlides(sheetData, insights);
-  showSlide(1);
-  btn.disabled = false;
-  btn.textContent = 'Generate →';
-
-  // Now fetch analysis (updates slides when done)
+  // Step 2 — run AI analysis
+  showLoading('Running AI analysis…');
   try {
     const aresp = await fetch('/api/analyze', {
       method: 'POST',
@@ -1071,27 +1055,37 @@ async function generateReport() {
       const ai = await aresp.json();
       if (ai && typeof ai === 'object' && !ai._error && !ai._parseError) {
         insights = ai;
-        currentInsights = insights;
-        renderAllSlides(sheetData, insights);
-        showSlide(currentSlide);
       }
     }
   } catch(err) {
     console.warn('Analysis fetch error (non-fatal):', err);
   }
+
+  // Step 3 — both done, render and reveal
+  currentData = sheetData;
+  currentInsights = insights;
+
+  visibleSlides = buildVisibleSlides(sheetData);
+  currentSlideIndex = 0;
+
+  renderAllSlides(sheetData, insights);
+  rebuildDotNav();
+  hideLoading();
+  showSlideByIndex(0);
+
+  btn.disabled = false;
+  btn.textContent = 'Generate →';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INIT — auto-load most recent quarter
+// INIT
 // ─────────────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Auto-select most recent period: Q1 2026 (current date is May 2026)
   const defaultPeriod = 'Q1 2026';
   selectedPeriod = defaultPeriod;
   document.querySelectorAll('.period-pill').forEach(p => {
     p.classList.toggle('active', p.dataset.period === defaultPeriod);
   });
-  showSlide(1);
   generateReport();
 });
 </script>
