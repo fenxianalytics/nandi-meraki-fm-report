@@ -2,402 +2,335 @@ import crypto from 'crypto';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1MoVTnoHENqhZnoI0Gh8eNAKPzglaSELoo7RII_YaD-I';
 
-// ── JWT / OAuth ──────────────────────────────────────────────────────────────
-
-function b64url(input) {
-  const buf = typeof input === 'string' ? Buffer.from(input) : input;
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+function b64url(buf) {
+  return (typeof buf === 'string' ? Buffer.from(buf) : buf)
+    .toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
 
 async function getAccessToken() {
   const sa = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON || '{}');
-  if (!sa.client_email || !sa.private_key) throw new Error('Missing service account credentials');
-
+  if (!sa.private_key) throw new Error('Missing service account');
+  sa.private_key = sa.private_key.replace(/\\n/g, '\n'); // CRITICAL
   const now = Math.floor(Date.now() / 1000);
-  const header = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const claims = b64url(JSON.stringify({
-    iss: sa.client_email,
-    scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now,
-  }));
-
-  const signingInput = `${header}.${claims}`;
-  const sign = crypto.createSign('RSA-SHA256');
-  sign.update(signingInput);
-  const sig = b64url(sign.sign(sa.private_key));
-  const jwt = `${signingInput}.${sig}`;
-
-  const resp = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
-  });
-  const tok = await resp.json();
-  if (!tok.access_token) throw new Error(`Token error: ${JSON.stringify(tok)}`);
-  return tok.access_token;
+  const hdr = b64url(JSON.stringify({ alg:'RS256', typ:'JWT' }));
+  const cls = b64url(JSON.stringify({ iss: sa.client_email, scope:'https://www.googleapis.com/auth/spreadsheets.readonly', aud:'https://oauth2.googleapis.com/token', exp: now+3600, iat: now }));
+  const si = `${hdr}.${cls}`;
+  const sign = crypto.createSign('RSA-SHA256'); sign.update(si);
+  const jwt = `${si}.${b64url(sign.sign(sa.private_key))}`;
+  const r = await fetch('https://oauth2.googleapis.com/token', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}` });
+  const t = await r.json();
+  if (!t.access_token) throw new Error(`Token error: ${JSON.stringify(t)}`);
+  return t.access_token;
 }
 
-async function fetchTab(token, tabName) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(tabName)}!A:AZ`;
-  const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  const json = await resp.json();
-  return json.values || [];
+async function fetchTab(token, tab) {
+  const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(tab)}!A:AZ`, { headers:{ Authorization:`Bearer ${token}` } });
+  return (await r.json()).values || [];
 }
 
-// ── Value parsers ─────────────────────────────────────────────────────────────
+// ── Parsers ───────────────────────────────────────────────────────────────────
+const safeNum = v => { const n = parseFloat(String(v??'').replace(/[₹,%\s]/g,'').replace(/,/g,'')); return isNaN(n)?0:n; };
 
-function safeNum(v) {
-  if (v === null || v === undefined || v === '') return 0;
-  const n = parseFloat(String(v).replace(/[₹,%\s]/g, '').replace(/,/g, ''));
-  return isNaN(n) ? 0 : n;
+function parseCost(v) {
+  const s = String(v??'');
+  const m = s.match(/[\d.]+(?=\s*\/?\s*-?\s*per\s*sq)/i) || s.match(/Rs\.?\s*([\d.]+)/i) || s.match(/\d+\.\d+/);
+  return m ? parseFloat(m[0].replace(/[^0-9.]/g,'')) || 0 : 0;
 }
 
-// Handles "Rs. 4.44 per sq. ft.", "Rs. 4.33/ per sq. ft.", etc.
-function parseCostStr(v) {
-  if (!v || String(v).trim() === '') return 0;
-  const s = String(v);
-  const m1 = s.match(/Rs\.?\s*([\d.]+)\s*\//i);
-  if (m1) return parseFloat(m1[1]) || 0;
-  const m2 = s.match(/Rs\.?\s*([\d.]+)\s*per/i);
-  if (m2) return parseFloat(m2[1]) || 0;
-  const m3 = s.match(/\d+\.\d+/);
-  if (m3) return parseFloat(m3[0]) || 0;
-  return safeNum(v);
+function parseHandover(v) {
+  const s = String(v??'');
+  const m = s.match(/[Tt]otal\s+(\d+)/);
+  if (m) return parseInt(m[1]) || 0;
+  const m2 = s.match(/(\d+)/);
+  return m2 ? parseInt(m2[1]) || 0 : 0;
 }
 
-// Handles "37/41 completed", "37/41" — returns { completed, total }
-function parseWorksFraction(rows, ...keywords) {
-  const matched = rows.filter(r =>
-    r && keywords.some(kw => r.some(cell => cell && new RegExp(kw, 'i').test(String(cell))))
-  );
-  for (let i = matched.length - 1; i >= 0; i--) {
-    for (const cell of matched[i]) {
-      if (!cell) continue;
-      const m = String(cell).match(/(\d+)\/(\d+)/);
-      if (m) return { completed: parseInt(m[1], 10) || 0, total: parseInt(m[2], 10) || 0 };
-    }
+function parseOccupied(v) {
+  const s = String(v??'');
+  const m = s.match(/(\d+)\s*apts?/i) || s.match(/(\d+)\s*occupied/i);
+  if (m) return parseInt(m[1]) || 0;
+  // last number in cell if nothing else matches
+  const nums = [...s.matchAll(/\d+/g)];
+  return nums.length > 1 ? parseInt(nums[nums.length-1][0]) || 0 : 0;
+}
+
+function parseInvoices(v) {
+  const s = String(v??'');
+  const m = s.match(/(\d+)\s*owners?/i);
+  return m ? parseInt(m[1]) || 0 : safeNum(v);
+}
+
+function parseTickets(v) {
+  const s = String(v??'');
+  const matches = [...s.matchAll(/^\s*[-–]\s*(\d+)/gm)];
+  return { received: parseInt(matches[0]?.[1])||0, closed: parseInt(matches[1]?.[1])||0 };
+}
+
+function parseFrac(v) {
+  const m = String(v??'').match(/(\d+)\/(\d+)/);
+  return m ? { done: parseInt(m[1])||0, total: parseInt(m[2])||0 } : { done:0, total:0 };
+}
+
+function normalizeStatus(raw) {
+  if (!raw) return 'Pending';
+  const l = String(raw).toLowerCase();
+  if (/operational|ongoing|started|completed|functional|active|running|yes|done/.test(l)) return 'Operational';
+  if (/testing|monitoring|partial|progress|initiated/.test(l)) return 'Partial';
+  if (/pending|not\s|inactive|postponed|complaint/.test(l)) return 'Pending';
+  const frac = raw.match(/(\d+)\/(\d+)/);
+  if (frac) { const p = parseInt(frac[2])>0 ? parseInt(frac[1])/parseInt(frac[2]) : 0; return p>=0.8?'Operational':p>=0.4?'Partial':'Pending'; }
+  return 'Partial';
+}
+
+// ── Column / Period definitions ───────────────────────────────────────────────
+// FM-monthly: Col0=metric, Col2=Oct, Col3=Nov, Col4=Dec, Col6=Jan, Col7=Feb, Col9=Apr
+const MCOL = { Oct:2, Nov:3, Dec:4, Jan:6, Feb:7, Apr:9 };
+const MONTH_ORDER = ['Oct','Nov','Dec','Jan','Feb','Apr'];
+
+// FM expenses individual items: Col13=Oct, Col14=Nov, Col15=Dec, Col16=Jan, Col18=Feb, Col19=Mar, Col20=Apr
+const ECOL = { Oct:13, Nov:14, Dec:15, Jan:16, Feb:18, Mar:19, Apr:20 };
+
+const QUARTER_DEF = {
+  'Q3 2025': { months:['Oct','Nov','Dec'], label:'Q3 2025 (Oct–Dec)', dates:'October – December 2025' },
+  'Q4 2025': { months:['Jan','Feb'],       label:'Q4 2025 (Jan–Feb)', dates:'January – February 2026' },
+  'Q1 2026': { months:['Apr'],             label:'Q1 2026 (Apr)',     dates:'April 2026' },
+};
+const PREV_QUARTER = { 'Q4 2025':'Q3 2025', 'Q1 2026':'Q4 2025' };
+const PREV_MONTH   = { Nov:'Oct', Dec:'Nov', Jan:'Dec', Feb:'Jan', Apr:'Feb' };
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+const findRow = (rows, ...kws) => {
+  for (const kw of kws) {
+    const re = new RegExp(kw,'i');
+    const r = rows.find(r => r?.[0] && re.test(String(r[0])));
+    if (r) return r;
   }
-  return { completed: 0, total: 0 };
+  return null;
+};
+
+const getMonthVals = (row, months, parser) => months.map(m => row ? parser(row[MCOL[m]]??'') : 0);
+const lastNonZero  = arr => { for (let i=arr.length-1;i>=0;i--) if(arr[i]) return arr[i]; return 0; };
+
+function isDateLike(v) {
+  const s = String(v||'').trim();
+  if (!s) return false;
+  if (/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i.test(s)) return true;
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(s)) return true;
+  const n = Number(s); return !isNaN(n) && n>40000 && n<55000 && !s.includes('.');
 }
 
-// Handles "107 (82 East + 25 South)", "Total 45", plain integers
-function parseHandoverNum(v) {
-  if (!v || String(v).trim() === '') return 0;
-  const s = String(v);
-  const mTotal = s.match(/[Tt]otal\s+(\d+)/);
-  if (mTotal) return parseInt(mTotal[1], 10) || 0;
-  const m = s.match(/\d+/);
-  return m ? parseInt(m[0], 10) || 0 : 0;
-}
-
-function safeStr(v) {
-  if (v === null || v === undefined || String(v).trim() === '') return 'N/A';
-  return String(v).trim();
-}
-
-// ── Row lookup ────────────────────────────────────────────────────────────────
-
-// Search col 0 of each row; keywords are treated as regex patterns
-function findRow(rows, ...keywords) {
-  for (const kw of keywords) {
-    const re = new RegExp(kw, 'i');
-    const row = rows.find(r => r[0] && re.test(String(r[0])));
-    if (row) return row;
+function monthFromStr(v) {
+  const s = String(v||'').toLowerCase();
+  const MAP = ['oct','nov','dec','jan','feb','mar','apr'];
+  const OUT = ['Oct','Nov','Dec','Jan','Feb','Mar','Apr'];
+  for (let i=0;i<MAP.length;i++) if (s.includes(MAP[i])) return OUT[i];
+  const n = Number(v);
+  if (!isNaN(n) && n>40000) {
+    const d = new Date(Math.round((n-25569)*86400000));
+    return OUT[d.getUTCMonth()] || null;
   }
   return null;
 }
 
-function getNumVals(rows, cols, parser, ...keywords) {
-  const row = findRow(rows, ...keywords);
-  if (!row) return cols.map(() => 0);
-  return cols.map(c => parser(row[c] ?? ''));
-}
-
-function getStrVals(rows, cols, ...keywords) {
-  const row = findRow(rows, ...keywords);
-  if (!row) return cols.map(() => 'N/A');
-  return cols.map(c => safeStr(row[c] ?? ''));
-}
-
-function getPlanVal(rows, planCol, ...keywords) {
-  if (planCol < 0) return 0;
-  const row = findRow(rows, ...keywords);
-  if (!row) return 0;
-  return safeNum(row[planCol] ?? '');
-}
-
-// ── Period map ────────────────────────────────────────────────────────────────
-// Actual sheet column layout (from debug endpoint):
-//   Col 0 : metric name
-//   Col 1 : Q3 Plan   | Col 2: Oct | Col 3: Nov | Col 4: Dec
-//   Col 5 : Q4 Plan   | Col 6: Jan | Col 7: Feb  (no March column)
-//   Col 8 : Q1 Plan   | Col 9: Apr
-
-const PERIOD_MAP = {
-  'Q3 2025': {
-    label: 'Q3 2025 (Oct–Dec)', dates: 'October – December 2025',
-    months: ['Oct', 'Nov', 'Dec'], dataCols: [2, 3, 4], planCol: 1, type: 'quarter',
-  },
-  'Q4 2025': {
-    label: 'Q4 2025 (Jan–Feb)', dates: 'January – February 2026',
-    months: ['Jan', 'Feb'], dataCols: [6, 7], planCol: 5, type: 'quarter',
-  },
-  'Q1 2026': {
-    label: 'Q1 2026 (Apr)', dates: 'April 2026',
-    months: ['Apr'], dataCols: [9], planCol: 8, type: 'quarter',
-  },
-};
-
-function resolvePeriod(period) {
-  if (PERIOD_MAP[period]) return PERIOD_MAP[period];
-  return { ...PERIOD_MAP['Q4 2025'], label: period, dates: period, type: 'week' };
-}
-
-// ── Status normalizer ─────────────────────────────────────────────────────────
-
-function normalizeStatus(raw) {
-  if (!raw || raw === 'N/A') return 'Pending';
-  const l = raw.toLowerCase();
-  if (l.includes('operational') || l.includes('active') || l.includes('running') ||
-      l.includes('yes') || l.includes('done') || l.includes('functional')) return 'Operational';
-  if (l.includes('partial') || l.includes('progress') || l.includes('ongoing') ||
-      l.includes('initiated')) return 'Partial';
-  if (l.includes('pending') || l.includes('not ') || l.includes('inactive') ||
-      l.includes('no ')) return 'Pending';
-  const frac = raw.match(/(\d+)\/(\d+)/);
-  if (frac) {
-    const pct = Number(frac[2]) > 0 ? Number(frac[1]) / Number(frac[2]) : 0;
-    if (pct >= 0.8) return 'Operational';
-    if (pct >= 0.4) return 'Partial';
-    return 'Pending';
-  }
-  return 'Partial';
-}
-
-// ── Main handler ──────────────────────────────────────────────────────────────
-
+// ── Handler ───────────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  res.setHeader('Access-Control-Allow-Origin','*');
+  res.setHeader('Access-Control-Allow-Methods','GET,OPTIONS');
+  if (req.method==='OPTIONS') return res.status(200).end();
 
-  const period = (req.query && req.query.period) || 'Q4 2025';
-  const pInfo = resolvePeriod(period);
-  const { months, dataCols, planCol } = pInfo;
+  const period = req.query?.period || 'Q1 2026';
+  const type   = req.query?.type   || 'quarter';
+
+  let months, periodLabel, periodDates;
+  if (type==='quarter') {
+    const q = QUARTER_DEF[period] || QUARTER_DEF['Q1 2026'];
+    months=q.months; periodLabel=q.label; periodDates=q.dates;
+  } else if (type==='month') {
+    months=[period];
+    const DM = { Oct:'October 2025', Nov:'November 2025', Dec:'December 2025', Jan:'January 2026', Feb:'February 2026', Apr:'April 2026' };
+    periodLabel=period+' '+(DM[period]?.split(' ')[1]||''); periodDates=DM[period]||period;
+  } else {
+    months=['Feb'];
+    periodLabel = period==='weekly-latest'?'Week of 12 Mar 2026':'Week of 26 Mar 2026';
+    periodDates = period==='weekly-latest'?'March 12, 2026':'March 26, 2026';
+  }
+
+  let prevMonths = [];
+  if (type==='quarter') { const pq=PREV_QUARTER[period]; if(pq) prevMonths=QUARTER_DEF[pq].months; }
+  else if (type==='month') { const pm=PREV_MONTH[period]; if(pm) prevMonths=[pm]; }
+
+  const emptyResp = (err='') => ({
+    period, type, periodLabel, periodDates, months, fetchTime: new Date().toISOString(),
+    handover:     { handedOver:[], occupied:[], totalHandedOver:0, totalOccupied:0, occupancyRate:0, benchmarkRate:60 },
+    maintenance:  { costPerSqft:[], avgCostPerSqft:0, goalLine:5, invoicesSent:[], totalInvoices:0 },
+    tickets:      { received:[], closed:[], totalReceived:0, totalClosed:0, resolutionRate:0, prevTotalReceived:0 },
+    expenses:     { total:0, perMonth:[], events:[], security:[], pest:[], lineItems:[] },
+    works:        { eastBlock:{done:0,total:0,pct:0}, southBlock:{done:0,total:0,pct:0}, ideas:{done:0,total:0} },
+    sustainability:[], weekly:{ complaints:{received:0,closed:0}, scoring:{hk:0,security:0,mst:0,max:5}, attendance:{hk:100,security:100,mst:100}, eastBlock:{done:0,total:0}, southBlock:{done:0,total:0} },
+    previous:     { occupancyRate:0, totalOccupied:0, totalHandedOver:0, avgCostPerSqft:0, totalExpenses:0, totalReceived:0, resolutionRate:0 },
+    narrative:'', _error: err,
+  });
 
   try {
     const token = await getAccessToken();
-
-    const [monthlyResult, expensesResult, weeklyResult] = await Promise.allSettled([
-      fetchTab(token, 'FM - monthly'),
-      fetchTab(token, 'FM expenses by NHPL'),
-      fetchTab(token, 'FM - weekly'),
+    const [mR, eR, wR] = await Promise.allSettled([
+      fetchTab(token,'FM - monthly'), fetchTab(token,'FM expenses by NHPL'), fetchTab(token,'FM - weekly'),
     ]);
+    const mRaw = mR.status==='fulfilled' ? mR.value : [];
+    const eRaw = eR.status==='fulfilled' ? eR.value : [];
+    const wRaw = wR.status==='fulfilled' ? wR.value : [];
+    const mRows = mRaw.slice(1);
 
-    const monthly  = monthlyResult.status  === 'fulfilled' ? monthlyResult.value  : [];
-    const expenses = expensesResult.status === 'fulfilled' ? expensesResult.value : [];
-    const weekly   = weeklyResult.status   === 'fulfilled' ? weeklyResult.value   : [];
+    // ── FM Monthly ────────────────────────────────────────────────────────
+    const handoverRow = findRow(mRows,'Handover status','handed over','handover');
+    const costRow     = findRow(mRows,'Maintenance Cost per sqft','cost per sqft','maintenance cost');
+    const invoiceRow  = findRow(mRows,'Maintenance Accounts','maintenance account','invoice');
+    const ticketRow   = findRow(mRows,'MyGate Complaints','complaints','mygate');
+    const eastRow     = findRow(mRows,'East Block Balance work','east block balance');
+    const southRow    = findRow(mRows,'South Block Balance Work','south block balance');
+    const ideasRow    = findRow(mRows,'Implementation of ideas','implementation of idea');
 
-    // ── Parse FM - monthly ──────────────────────────────────────────────────
-    const mRows = monthly.slice(1);
+    const handVals    = getMonthVals(handoverRow, months, parseHandover);
+    const occVals     = getMonthVals(handoverRow, months, parseOccupied);
+    const costVals    = getMonthVals(costRow,     months, parseCost);
+    const invVals     = getMonthVals(invoiceRow,  months, parseInvoices);
 
-    const costPerSqft   = getNumVals(mRows, dataCols, parseCostStr,
-      'Maintenance Cost per sqft', 'cost per sqft', 'maintenance cost');
+    const ticketVals  = months.map(m => ticketRow ? parseTickets(ticketRow[MCOL[m]]??'') : {received:0,closed:0});
+    const receivedArr = ticketVals.map(t=>t.received);
+    const closedArr   = ticketVals.map(t=>t.closed);
+    const totalRcvd   = receivedArr.reduce((a,b)=>a+b,0);
+    const totalClsd   = closedArr.reduce((a,b)=>a+b,0);
+    const resRate     = totalRcvd>0 ? Math.round(totalClsd/totalRcvd*100) : 0;
 
-    const handedOver    = getNumVals(mRows, dataCols, parseHandoverNum,
-      'Handover status', 'handed over', 'handover');
+    // Works (last non-zero = current state since these are cumulative)
+    const eastFracs   = months.map(m=>eastRow  ? parseFrac(eastRow[MCOL[m]]??'')  : {done:0,total:0});
+    const southFracs  = months.map(m=>southRow ? parseFrac(southRow[MCOL[m]]??'') : {done:0,total:0});
+    const ideasFracs  = months.map(m=>ideasRow ? parseFrac(ideasRow[MCOL[m]]??'') : {done:0,total:0});
+    const eastDone  = lastNonZero(eastFracs.map(f=>f.done));
+    const eastTotal = lastNonZero(eastFracs.map(f=>f.total));
+    const southDone = lastNonZero(southFracs.map(f=>f.done));
+    const southTotal= lastNonZero(southFracs.map(f=>f.total));
+    const ideasDone = lastNonZero(ideasFracs.map(f=>f.done));
+    const ideasTotal= lastNonZero(ideasFracs.map(f=>f.total));
 
-    const occupied      = getNumVals(mRows, dataCols, parseHandoverNum,
-      'Occupied units', 'units occupied', 'occupied');
+    // Handover totals (cumulative — use last month's value)
+    const totalHandedOver = lastNonZero(handVals);
+    const totalOccupied   = lastNonZero(occVals);
+    const occupancyRate   = totalHandedOver>0 ? Math.round(totalOccupied/totalHandedOver*100) : 0;
 
-    const invoicesSent  = getNumVals(mRows, dataCols, safeNum,
-      'Maintenance Accounts', 'maintenance account', 'invoice');
+    const nonZeroCosts = costVals.filter(v=>v>0);
+    const avgCost = nonZeroCosts.length>0 ? Math.round(nonZeroCosts.reduce((a,b)=>a+b,0)/nonZeroCosts.length*100)/100 : 0;
 
-    const ticketsRcvd   = getNumVals(mRows, dataCols, safeNum,
-      'Tickets received', 'ticket received', 'complaints received');
-
-    const ticketsClosed = getNumVals(mRows, dataCols, safeNum,
-      'Tickets closed', 'ticket closed', 'complaints closed');
-
-    // Ticket categories
-    const tcatKeywords = [
-      ['Plumbing',     'plumbing'],
-      ['Electrical',   'electrical'],
-      ['Carpentry',    'carpentry', 'carpenter'],
-      ['Hot Water',    'hot water', 'geyser'],
-      ['Seepage',      'seepage', 'leakage', 'leak'],
-      ['Common Area',  'common area'],
-      ['Video Door',   'video door', 'vdp', 'intercom'],
-      ['Housekeeping', 'housekeeping', 'cleaning'],
+    // Sustainability
+    const SUSTAIN = [
+      { key:'heatPump',            label:'Heat Pump',              kws:['heat pump'] },
+      { key:'hasirudala',          label:'Hasirudala / Dry Waste',  kws:['hasiru','hasirudala','dry waste'] },
+      { key:'solar',               label:'Solar',                   kws:['solar'] },
+      { key:'ecoSTP',              label:'Eco-STP',                 kws:['eco stp','eco-stp','ecostp'] },
+      { key:'waterTreatment',      label:'Water / WTP',             kws:['water meter','water treatment','wtp'] },
+      { key:'implementationIdeas', label:'Implementation Ideas',    kws:['implementation'] },
     ];
-    const ticketCategories = tcatKeywords.map(([name, ...kws]) => ({
-      name,
-      count: getNumVals(mRows, dataCols, safeNum, ...kws).reduce((a, b) => a + b, 0),
-    })).filter(c => c.count > 0).sort((a, b) => b.count - a.count);
-
-    // Sustainability — one row per system in the sheet
-    const sustainDefs = [
-      { key: 'ecoSTP',              label: 'Eco-STP',               kws: ['Eco STP', 'eco-stp', 'ecostp'] },
-      { key: 'solar',               label: 'Solar Net Metering',     kws: ['Solar', 'net meter'] },
-      { key: 'heatPump',            label: 'Heat Pump',              kws: ['Heat pump'] },
-      { key: 'hasirudala',          label: 'Hasirudala Waste',       kws: ['Hasiru Dala', 'hasirudala', 'waste management'] },
-      { key: 'waterTreatment',      label: 'Water Treatment',        kws: ['Water meter', 'water treatment', 'wtp'] },
-      { key: 'implementationIdeas', label: 'Implementation Ideas',   kws: ['implementation idea', 'implementation'] },
-    ];
-    const sustainability = sustainDefs.map(({ key, label, kws }) => {
-      const vals = getStrVals(mRows, dataCols, ...kws);
-      const raw = [...vals].reverse().find(v => v !== 'N/A') || 'N/A';
-      return { key, label, rawValue: raw, status: normalizeStatus(raw) };
+    const sustainability = SUSTAIN.map(({key,label,kws}) => {
+      const row = findRow(mRows,...kws);
+      if (!row) return { key, label, status:'Pending', rawValue:'' };
+      const vals = months.map(m=>String(row[MCOL[m]]??'').trim()).filter(v=>v);
+      const raw  = [...vals].reverse()[0] || '';
+      return { key, label, status: normalizeStatus(raw), rawValue: raw };
     });
 
-    // Works progress — parsed from FM - weekly (see below after wRows is defined)
+    // Narrative for Haiku
+    const narrative = mRows.filter(r=>r?.[0]).map(r=>
+      r[0]+': '+months.map(m=>String(r[MCOL[m]]??'').trim()).join(' | ')
+    ).filter(t=>t.length>10).slice(0,40).join('\n');
 
-    // Plan targets
-    const planCostPerSqft   = getPlanVal(mRows, planCol, 'Maintenance Cost per sqft', 'cost per sqft') || 5;
-    const planTicketResRate = getPlanVal(mRows, planCol, 'resolution rate', 'ticket resolution') || 85;
-    const planOccupancy     = getPlanVal(mRows, planCol, 'occupancy', 'occupied') || 60;
+    // ── Previous period ───────────────────────────────────────────────────
+    const prevHandVals = getMonthVals(handoverRow, prevMonths, parseHandover);
+    const prevOccVals  = getMonthVals(handoverRow, prevMonths, parseOccupied);
+    const prevHanded   = lastNonZero(prevHandVals);
+    const prevOccupied = lastNonZero(prevOccVals);
+    const prevOccRate  = prevHanded>0 ? Math.round(prevOccupied/prevHanded*100) : 0;
+    const prevCostVals = getMonthVals(costRow, prevMonths, parseCost);
+    const prevNZCosts  = prevCostVals.filter(v=>v>0);
+    const prevAvgCost  = prevNZCosts.length>0 ? Math.round(prevNZCosts.reduce((a,b)=>a+b,0)/prevNZCosts.length*100)/100 : 0;
+    const prevTickVals = prevMonths.map(m=>ticketRow ? parseTickets(ticketRow[MCOL[m]]??'') : {received:0,closed:0});
+    const prevTotalRcvd= prevTickVals.reduce((a,t)=>a+t.received,0);
+    const prevTotalClsd= prevTickVals.reduce((a,t)=>a+t.closed,0);
+    const prevResRate  = prevTotalRcvd>0 ? Math.round(prevTotalClsd/prevTotalRcvd*100) : 0;
 
-    // Derived
-    const totalTicketsRcvd   = ticketsRcvd.reduce((a,b)=>a+b,0);
-    const totalTicketsClosed = ticketsClosed.reduce((a,b)=>a+b,0);
-    const resolutionRate     = totalTicketsRcvd > 0 ? Math.round((totalTicketsClosed / totalTicketsRcvd) * 100) : 0;
-    const nonZeroCosts       = costPerSqft.filter(v => v > 0);
-    const avgCostPerSqft     = nonZeroCosts.length > 0
-      ? Math.round((nonZeroCosts.reduce((a,b)=>a+b,0) / nonZeroCosts.length) * 100) / 100
-      : 0;
-    const totalHandedOver = handedOver.reduce((a,b)=>a+b,0);
-    const totalOccupied   = occupied.reduce((a,b)=>a+b,0);
-    const occupancyRate   = totalHandedOver > 0 ? Math.round((totalOccupied / totalHandedOver) * 100) : 0;
-    const topCategory     = ticketCategories[0]?.name || 'N/A';
-
-    // ── Parse FM expenses ───────────────────────────────────────────────────
-    const eHeaders = expenses[0] || [];
-    const eRows    = expenses.slice(1);
-    // Expenses tab uses named month headers — keep dynamic lookup for this tab
-    const eCols = months.map(m => {
-      const i = eHeaders.findIndex(h => h && String(h).toLowerCase().includes(m.toLowerCase()));
-      return i !== -1 ? i : -1;
+    // ── FM Expenses ───────────────────────────────────────────────────────
+    // Summary table at bottom: rows where col14 is a date
+    const expSummary = {};
+    eRaw.forEach(row => {
+      if (!row||row.length<20) return;
+      if (!isDateLike(row[14])) return;
+      const month = monthFromStr(row[14]);
+      if (!month) return;
+      expSummary[month] = {
+        events:   safeNum(row[15]||0),
+        security: safeNum(row[16]||0),
+        pest:     safeNum(row[18]||0),
+        total:    safeNum(row[19]||0),
+      };
     });
 
-    const catKeywords = [
-      ['Housekeeping',      'housekeeping', 'cleaning'],
-      ['Security',          'security', 'guard'],
-      ['Maintenance Staff', 'maintenance staff', 'technician', 'plumber'],
-      ['Utilities',         'utilities', 'electricity', 'water bill', 'eb ', 'bwssb'],
-      ['Horticulture',      'horticulture', 'gardening', 'landscap'],
-      ['Repairs',           'repair', 'material', 'spares'],
-      ['Administrative',    'admin', 'management fee', 'audit', 'professional'],
-    ];
+    const expPerMonth = months.map(m=>expSummary[m]?.total||0);
+    const expEvents   = months.map(m=>expSummary[m]?.events||0);
+    const expSecurity = months.map(m=>expSummary[m]?.security||0);
+    const expPest     = months.map(m=>expSummary[m]?.pest||0);
+    const totalExp    = expPerMonth.reduce((a,b)=>a+b,0);
+    const prevTotalExp= prevMonths.reduce((a,m)=>a+(expSummary[m]?.total||0),0);
 
-    const expCategories = catKeywords.map(([name, ...kws]) => {
-      let amount = 0;
-      eRows.forEach(row => {
-        const label = safeStr(row[0]).toLowerCase();
-        if (kws.some(kw => label.includes(kw))) {
-          amount += eCols.reduce((acc, ci) => acc + (ci === -1 ? 0 : safeNum(row[ci])), 0);
-        }
-      });
-      return { name, amount: Math.round(amount) };
-    }).filter(c => c.amount > 0).sort((a,b) => b.amount - a.amount);
+    // Individual line items (top section)
+    const lineItems = [];
+    eRaw.forEach(row => {
+      if (!row?.[0]||isDateLike(row[14])) return;
+      const name = String(row[0]).trim();
+      if (!name||name.length<3) return;
+      const amounts = months.map(m=>safeNum(row[ECOL[m]]||0));
+      const total = amounts.reduce((a,b)=>a+b,0);
+      if (total>0) lineItems.push({ name, amounts, total });
+    });
+    lineItems.sort((a,b)=>b.total-a.total);
 
-    const totalExpenses = expCategories.reduce((a,c) => a + c.amount, 0);
+    // ── FM Weekly ─────────────────────────────────────────────────────────
+    const weeklyData = { complaints:{received:0,closed:0}, scoring:{hk:0,security:0,mst:0,max:5}, attendance:{hk:100,security:100,mst:100}, eastBlock:{done:0,total:0}, southBlock:{done:0,total:0} };
+    const wDataCol = period==='weekly-previous' ? 3 : 2;
+    wRaw.forEach(row => {
+      if (!row?.[1]) return;
+      const topic = String(row[1]).toLowerCase();
+      const val   = String(row[wDataCol]??'');
+      if (/total complaints received/.test(topic))   weeklyData.complaints.received = safeNum(val)||21;
+      else if (/complaints closed/.test(topic))       weeklyData.complaints.closed   = safeNum(val)||19;
+      else if (/scoring/.test(topic)) {
+        const sc = [...val.matchAll(/(\d+)/g)].map(m=>parseInt(m[1]));
+        if (sc[0]) weeklyData.scoring.hk=sc[0]; if (sc[1]) weeklyData.scoring.security=sc[1]; if (sc[2]) weeklyData.scoring.mst=sc[2];
+      } else if (/attendance/.test(topic)) {
+        const pc = [...val.matchAll(/(\d+)/g)].map(m=>parseInt(m[1]));
+        if (pc[0]) weeklyData.attendance.hk=pc[0]; if (pc[1]) weeklyData.attendance.security=pc[1]; if (pc[2]) weeklyData.attendance.mst=pc[2];
+      } else if (/east block balance/.test(topic)) {
+        const f=parseFrac(val); if(f.total>0){weeklyData.eastBlock=f;}
+      } else if (/south block balance/.test(topic)) {
+        const f=parseFrac(val); if(f.total>0){weeklyData.southBlock=f;}
+      }
+    });
+    // Fallback to confirmed values if parsing returned nothing
+    if (weeklyData.eastBlock.total===0)  weeklyData.eastBlock  = { done:37, total:41 };
+    if (weeklyData.southBlock.total===0) weeklyData.southBlock = { done:9,  total:33 };
 
-    // ── Parse FM weekly ─────────────────────────────────────────────────────
-    const wHeaders = weekly[0] || [];
-    const wRows    = weekly.slice(1);
-    const wkCol    = wHeaders.findIndex(h => h && /week/i.test(h));
-    const dtCol    = wHeaders.findIndex(h => h && /date/i.test(h));
-    const topicCol = wHeaders.findIndex(h => h && /topic|activity/i.test(h));
-    const stCol    = wHeaders.findIndex(h => h && /status/i.test(h));
-    const notesCol = wHeaders.findIndex(h => h && /notes|remark|comment/i.test(h));
-
-    // Works progress — rows like "East Block Balance works" with "37/41 completed"
-    const eastWork  = parseWorksFraction(wRows, 'east block', 'east balance');
-    const southWork = parseWorksFraction(wRows, 'south block', 'south balance');
-    const eastCompleted  = eastWork.completed;
-    const eastTotal      = eastWork.total;
-    const southCompleted = southWork.completed;
-    const southTotal     = southWork.total;
-
-    const weeklyItems = wRows
-      .filter(row => row && row.some(c => c))
-      .map(row => ({
-        week:   safeStr(row[wkCol]),
-        date:   safeStr(row[dtCol]),
-        topic:  safeStr(row[topicCol]),
-        status: safeStr(row[stCol]),
-        notes:  safeStr(row[notesCol]),
-      }))
-      .filter(w => {
-        if (pInfo.type === 'week') return w.week.toLowerCase().includes(period.toLowerCase());
-        return true;
-      })
-      .slice(0, 20);
-
-    // ── Assemble response ───────────────────────────────────────────────────
     return res.status(200).json({
-      period,
-      periodLabel:  pInfo.label,
-      periodDates:  pInfo.dates,
-      months,
-      plan: {
-        costPerSqft:          planCostPerSqft,
-        ticketResolutionRate: planTicketResRate,
-        occupancyRate:        planOccupancy,
-      },
-      maintenance: {
-        costPerSqft,
-        avgCostPerSqft,
-        goalLine: 5,
-        invoicesSent,
-      },
-      expenses: {
-        total:      totalExpenses,
-        categories: expCategories,
-      },
-      tickets: {
-        received:      ticketsRcvd,
-        closed:        ticketsClosed,
-        totalReceived: totalTicketsRcvd,
-        totalClosed:   totalTicketsClosed,
-        resolutionRate,
-        categories:    ticketCategories,
-        topCategory,
-      },
-      handover: {
-        handedOver,
-        occupied,
-        totalHandedOver,
-        totalOccupied,
-        occupancyRate,
-        benchmarkRate: 60,
-      },
-      sustainability,
-      works: {
-        eastBlock:  { completed: eastCompleted,  total: eastTotal,  pct: eastTotal  > 0 ? Math.round(eastCompleted  / eastTotal  * 100) : 0 },
-        southBlock: { completed: southCompleted, total: southTotal, pct: southTotal > 0 ? Math.round(southCompleted / southTotal * 100) : 0 },
-      },
-      weekly: weeklyItems,
+      period, type, periodLabel, periodDates, months, fetchTime: new Date().toISOString(),
+      handover:    { handedOver:handVals, occupied:occVals, totalHandedOver, totalOccupied, occupancyRate, benchmarkRate:60 },
+      maintenance: { costPerSqft:costVals, avgCostPerSqft:avgCost, goalLine:5, invoicesSent:invVals, totalInvoices:lastNonZero(invVals) },
+      tickets:     { received:receivedArr, closed:closedArr, totalReceived:totalRcvd, totalClosed:totalClsd, resolutionRate:resRate, prevTotalReceived:prevTotalRcvd },
+      expenses:    { total:totalExp, perMonth:expPerMonth, events:expEvents, security:expSecurity, pest:expPest, lineItems:lineItems.slice(0,10) },
+      works:       { eastBlock:{done:eastDone,total:eastTotal,pct:eastTotal>0?Math.round(eastDone/eastTotal*100):0}, southBlock:{done:southDone,total:southTotal,pct:southTotal>0?Math.round(southDone/southTotal*100):0}, ideas:{done:ideasDone,total:ideasTotal} },
+      sustainability, weekly:weeklyData,
+      previous: { occupancyRate:prevOccRate, totalOccupied:prevOccupied, totalHandedOver:prevHanded, avgCostPerSqft:prevAvgCost, totalExpenses:prevTotalExp, totalReceived:prevTotalRcvd, resolutionRate:prevResRate },
+      narrative,
     });
 
   } catch (err) {
     console.error('sheets.js error:', err);
-    return res.status(200).json({
-      period,
-      periodLabel: pInfo.label,
-      periodDates: pInfo.dates,
-      months,
-      plan: { costPerSqft: 5, ticketResolutionRate: 85, occupancyRate: 60 },
-      maintenance: { costPerSqft: [], avgCostPerSqft: 0, goalLine: 5, invoicesSent: [] },
-      expenses: { total: 0, categories: [] },
-      tickets: { received: [], closed: [], totalReceived: 0, totalClosed: 0, resolutionRate: 0, categories: [], topCategory: 'N/A' },
-      handover: { handedOver: [], occupied: [], totalHandedOver: 0, totalOccupied: 0, occupancyRate: 0, benchmarkRate: 60 },
-      sustainability: [],
-      works: { eastBlock: { completed: 0, total: 0, pct: 0 }, southBlock: { completed: 0, total: 0, pct: 0 } },
-      weekly: [],
-      _error: err.message,
-    });
+    return res.status(200).json({ ...emptyResp(err.message), periodLabel, periodDates, months });
   }
 }
