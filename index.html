@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FM Report — Nandi Meraki</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --maroon:#7a1a14;--maroon-dark:#5c110d;--maroon-light:#9e2219;
+  --maroon-pale:rgba(122,26,20,0.06);--maroon-pale2:rgba(122,26,20,0.11);
+  --white:#ffffff;--off-white:#f8f5f3;--light-gray:#f0ebe8;--mid-gray:#e2dbd7;
+  --text-dark:#1e1210;--text-mid:#6b4f4a;--text-light:#9c7d78;
+  --green:#0a6b6f;--green-light:#e0f2f3;
+  --red:#c62828;--red-light:#ffebee;
+  --amber:#b8692e;--amber-light:#fef3e6;
+  --blue:#2e5d93;--blue-light:#e3edf8;
+  --slide-radius:8px;
+  --card-shadow:0 2px 8px rgba(122,26,20,0.07),0 0 0 1px rgba(122,26,20,0.06);
+  --card-radius:6px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-gradient(ellipse at 50% 0%,rgba(122,26,20,0.12) 0%,transparent 60%);display:flex;flex-direction:column;align-items:center;min-height:100vh;}
+
+/* ── NAV ── */
+.nav{position:fixed;top:0;left:0;right:0;background:rgba(8,3,2,0.96);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:100;border-bottom:1px solid rgba(255,255,255,0.06);height:48px;}
+.nav-brand{color:rgba(255,255,255,0.5);font-size:11px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;}
+.nav-controls{display:flex;gap:6px;align-items:center;}
+.nav-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);padding:5px 16px;border-radius:5px;font-size:11px;cursor:pointer;transition:all 0.18s;font-family:'Inter',sans-serif;letter-spacing:0.3px;}
+.nav-btn:hover{background:rgba(122,26,20,0.55);border-color:rgba(158,34,25,0.6);color:white;}
+.slide-counter{color:rgba(255,255,255,0.28);font-size:11px;min-width:56px;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:1px;}
+
+/* ── PERIOD BAR ── */
+.period-bar{position:fixed;top:48px;left:0;right:0;z-index:99;background:rgba(6,2,1,0.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.05);padding:0 20px;display:flex;align-items:center;gap:14px;height:52px;overflow-x:auto;}
+.period-group{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.period-group-label{color:rgba(255,255,255,0.22);font-size:9px;letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-right:4px;}
+.period-pill{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.45);padding:4px 11px;border-radius:20px;font-size:10.5px;cursor:pointer;transition:all 0.15s;font-family:'Inter',sans-serif;white-space:nowrap;letter-spacing:0.2px;}
+.period-pill:hover{background:rgba(122,26,20,0.3);border-color:rgba(158,34,25,0.4);color:rgba(255,255,255,0.75);}
+.period-pill.active{background:var(--maroon);border-color:var(--maroon-light);color:white;font-weight:600;}
+.period-divider{width:1px;height:22px;background:rgba(255,255,255,0.08);flex-shrink:0;}
+.generate-btn{background:linear-gradient(135deg,var(--maroon),var(--maroon-light));border:none;color:white;padding:6px 18px;border-radius:5px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;letter-spacing:0.5px;transition:all 0.18s;flex-shrink:0;margin-left:auto;}
+.generate-btn:hover{background:linear-gradient(135deg,var(--maroon-light),#c5291e);box-shadow:0 4px 16px rgba(122,26,20,0.5);}
+.generate-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+/* ── WRAPPER & SLIDES ── */
+.slides-wrapper{margin-top:100px;width:100%;max-width:1300px;padding:20px;padding-bottom:60px;}
+.slide{display:none;width:100%;min-height:calc((100vw - 40px)*9/16);max-width:1300px;position:relative;border-radius:var(--slide-radius);overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,0.8),0 0 0 1px rgba(255,255,255,0.05);flex-direction:column;}
+.slide.active{display:flex;}
+
+/* ── SLIDE TYPES ── */
+.slide-cover{background:var(--maroon-dark);justify-content:center;align-items:flex-start;padding:6% 8%;min-height:calc((100vw - 32px)*9/16);overflow:hidden;}
+.slide-white{background:var(--white);flex-direction:column;}
+.slide-offwhite{background:#f7f4f2;flex-direction:column;}
+
+/* ── COVER ELEMENTS ── */
+.cover-bg-pattern{position:absolute;inset:0;background-image:radial-gradient(circle at 75% 50%,rgba(180,60,40,0.18) 0%,transparent 60%),radial-gradient(circle at 20% 80%,rgba(80,10,5,0.3) 0%,transparent 50%);}
+.cover-grid-lines{position:absolute;inset:0;opacity:0.07;background-image:repeating-linear-gradient(0deg,transparent,transparent 48px,rgba(255,255,255,0.5) 48px,rgba(255,255,255,0.5) 49px),repeating-linear-gradient(90deg,transparent,transparent 48px,rgba(255,255,255,0.5) 48px,rgba(255,255,255,0.5) 49px);}
+.cover-diagonal{position:absolute;right:0;top:0;bottom:0;width:44%;background:linear-gradient(150deg,rgba(122,26,20,0.15) 0%,rgba(10,3,2,0.88) 100%);clip-path:polygon(14% 0%,100% 0%,100% 100%,0% 100%);}
+.cover-accent-line{position:absolute;left:8%;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,transparent,rgba(255,255,255,0.25),transparent);}
+.cover-watermark{position:absolute;right:8%;top:50%;transform:translateY(-50%);font-family:'DM Serif Display',serif;font-size:clamp(80px,14vw,200px);color:rgba(255,255,255,0.04);font-weight:400;letter-spacing:-4px;line-height:1;user-select:none;z-index:0;}
+.cover-eyebrow{color:rgba(255,255,255,0.38);font-size:clamp(8px,0.78vw,11px);letter-spacing:4px;text-transform:uppercase;margin-bottom:2vw;font-weight:400;}
+.cover-title{color:white;font-family:'DM Serif Display',serif;font-size:clamp(34px,5.5vw,74px);font-weight:400;line-height:1.02;margin-bottom:1.2vw;letter-spacing:-0.5px;}
+.cover-title em{color:rgba(255,180,160,0.75);font-style:italic;}
+.cover-subtitle{color:rgba(255,255,255,0.42);font-size:clamp(10px,1vw,15px);font-weight:300;letter-spacing:2px;margin-bottom:3.5vw;}
+.cover-summary{color:rgba(255,255,255,0.62);font-size:clamp(10px,0.9vw,14px);font-weight:300;line-height:1.7;max-width:380px;margin-bottom:3vw;}
+.cover-meta{color:rgba(255,255,255,0.22);font-size:clamp(7px,0.62vw,9px);letter-spacing:2px;text-transform:uppercase;}
+.cover-stats-row{display:flex;gap:0;border:1px solid rgba(255,255,255,0.12);border-radius:4px;overflow:hidden;align-self:flex-start;margin-top:2.5vw;}
+.cover-stat{padding:11px 18px;border-right:1px solid rgba(255,255,255,0.1);}
+.cover-stat:last-child{border-right:none;}
+.cover-stat-val{color:white;font-size:clamp(16px,1.8vw,26px);font-weight:700;line-height:1;}
+.cover-stat-label{color:rgba(255,255,255,0.35);font-size:clamp(7px,0.58vw,9px);text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;}
+
+/* ── SLIDE HEADER ── */
+.slide-header{background:linear-gradient(135deg,var(--maroon) 0%,var(--maroon-dark) 100%);padding:13px 26px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid rgba(0,0,0,0.15);}
+.slide-header-title{color:white;font-size:clamp(11px,1.2vw,18px);font-weight:500;letter-spacing:0.2px;}
+.slide-header-tag{color:rgba(255,255,255,0.45);font-size:clamp(7px,0.58vw,9px);text-transform:uppercase;letter-spacing:2.5px;font-weight:500;background:rgba(255,255,255,0.08);padding:3px 9px;border-radius:3px;}
+.slide-body{flex:1;padding:16px 24px 20px;overflow:hidden;display:flex;flex-direction:column;gap:13px;}
+.slide-body-row{display:flex;gap:18px;flex:1;min-height:0;}
+
+/* ── KPI CARDS ── */
+.kpi-row{display:flex;gap:11px;flex-shrink:0;}
+.kpi-card{flex:1;background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:14px 16px;position:relative;overflow:hidden;box-shadow:var(--card-shadow);}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3.5px;background:var(--maroon);border-radius:6px 6px 0 0;}
+.kpi-card.green::before{background:var(--green);}
+.kpi-card.amber::before{background:var(--amber);}
+.kpi-card.blue::before{background:var(--blue);}
+.kpi-card.red::before{background:var(--red);}
+.kpi-card.secondary{background:var(--off-white);}
+.kpi-label{color:var(--text-light);font-size:clamp(7px,0.6vw,9px);text-transform:uppercase;letter-spacing:1.8px;margin-bottom:6px;font-weight:600;}
+.kpi-val{color:var(--text-dark);font-size:clamp(22px,2.6vw,40px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;}
+.kpi-sub{color:var(--text-light);font-size:clamp(7px,0.57vw,9px);margin-top:5px;line-height:1.5;}
+.kpi-delta{display:inline-flex;align-items:center;gap:3px;font-size:clamp(7px,0.58vw,9px);font-weight:700;padding:3px 9px;border-radius:4px;margin-top:7px;letter-spacing:0.2px;}
+.delta-up{background:var(--green-light);color:var(--green);}
+.delta-down{background:var(--red-light);color:var(--red);}
+.delta-neutral{background:var(--amber-light);color:var(--amber);}
+
+/* ── LAYOUT HELPERS ── */
+.section-title{font-size:clamp(7px,0.63vw,9.5px);font-weight:700;color:var(--maroon);text-transform:uppercase;letter-spacing:2.8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1.5px solid rgba(122,26,20,0.15);flex-shrink:0;}
+.col-left{flex:1.4;display:flex;flex-direction:column;gap:11px;min-width:0;}
+.col-right{flex:1;display:flex;flex-direction:column;gap:11px;min-width:0;}
+.col-half{flex:1;display:flex;flex-direction:column;gap:11px;min-width:0;}
+.col-third{flex:1;display:flex;flex-direction:column;gap:11px;min-width:0;}
+.chart-wrap{position:relative;flex:1;min-height:0;background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:12px 14px;display:flex;flex-direction:column;box-shadow:var(--card-shadow);}
+.chart-title{font-size:clamp(7px,0.6vw,9px);font-weight:700;color:var(--maroon);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;flex-shrink:0;}
+.chart-canvas-wrap{flex:1;min-height:0;position:relative;}
+.chart-canvas-wrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
+.no-data-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:clamp(8px,0.7vw,11px);font-style:italic;}
+.highlight-box{background:rgba(122,26,20,0.03);border:1px solid rgba(122,26,20,0.1);border-left:3.5px solid var(--maroon);border-radius:var(--card-radius);padding:12px 14px;font-size:clamp(8px,0.65vw,10.5px);line-height:1.8;color:var(--text-dark);flex-shrink:0;}
+.highlight-box.green{border-left-color:var(--green);background:rgba(10,107,111,0.03);}
+.highlight-box.amber{border-left-color:var(--amber);background:rgba(184,105,46,0.03);}
+.highlight-box strong{color:var(--maroon);}
+.footnote{font-size:clamp(7px,0.54vw,9px);color:var(--text-light);margin-top:5px;font-style:italic;flex-shrink:0;line-height:1.6;}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;font-size:clamp(7px,0.55vw,9px);padding:2px 10px;border-radius:4px;font-weight:700;letter-spacing:0.3px;}
+.badge-green{background:var(--green-light);color:var(--green);}
+.badge-amber{background:var(--amber-light);color:var(--amber);}
+.badge-red{background:var(--red-light);color:var(--red);}
+.badge-blue{background:var(--blue-light);color:var(--blue);}
+
+/* ── SCORECARD COLUMNS ── */
+.scorecard-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;flex:1;}
+.scorecard-col{border-radius:var(--card-radius);overflow:hidden;box-shadow:var(--card-shadow);display:flex;flex-direction:column;}
+.scorecard-col-header{padding:11px 14px;font-size:clamp(8px,0.68vw,11px);font-weight:700;letter-spacing:0.5px;color:white;flex-shrink:0;}
+.scorecard-col-header.green-hdr{background:var(--green);}
+.scorecard-col-header.amber-hdr{background:var(--amber);}
+.scorecard-col-header.red-hdr{background:var(--red);}
+.scorecard-col-body{background:white;flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:9px;}
+.scorecard-item{font-size:clamp(8px,0.65vw,10.5px);color:var(--text-dark);line-height:1.5;padding:7px 10px;border-radius:4px;border-left:3px solid transparent;}
+.scorecard-item.green{background:rgba(10,107,111,0.04);border-left-color:var(--green);}
+.scorecard-item.amber{background:rgba(184,105,46,0.04);border-left-color:var(--amber);}
+.scorecard-item.red{background:rgba(198,40,40,0.04);border-left-color:var(--red);}
+.scorecard-empty{color:var(--text-light);font-size:clamp(8px,0.62vw,10px);font-style:italic;padding:8px 10px;}
+.kpi-chips{display:flex;gap:10px;flex-shrink:0;}
+.kpi-chip{flex:1;background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:12px 14px;box-shadow:var(--card-shadow);position:relative;overflow:hidden;}
+.kpi-chip::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:6px 6px 0 0;}
+.kpi-chip.green::before{background:var(--green);}
+.kpi-chip.amber::before{background:var(--amber);}
+.kpi-chip.red::before{background:var(--red);}
+.kpi-chip.blue::before{background:var(--blue);}
+.chip-val{font-size:clamp(18px,2vw,30px);font-weight:700;color:var(--text-dark);line-height:1;font-variant-numeric:tabular-nums;}
+.chip-label{font-size:clamp(7px,0.57vw,9px);color:var(--text-light);text-transform:uppercase;letter-spacing:1.5px;margin-top:3px;font-weight:600;}
+.chip-bench{font-size:clamp(7px,0.55vw,9px);color:var(--text-light);margin-top:4px;}
+
+/* ── SUSTAINABILITY CARDS ── */
+.sustain-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;flex:1;}
+.sustain-card{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:14px 16px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;gap:8px;}
+.sustain-card-name{font-size:clamp(8px,0.7vw,11px);font-weight:700;color:var(--text-dark);}
+.sustain-card-note{font-size:clamp(7px,0.58vw,9.5px);color:var(--text-mid);line-height:1.55;margin-top:auto;}
+
+/* ── WORKS TRACKER ── */
+.works-section{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:16px 18px;box-shadow:var(--card-shadow);flex:1;}
+.works-title{font-size:clamp(8px,0.7vw,11px);font-weight:700;color:var(--maroon);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;}
+.works-progress-wrap{margin-bottom:10px;}
+.works-prog-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
+.works-prog-label{font-size:clamp(8px,0.65vw,10.5px);font-weight:700;color:var(--text-dark);}
+.works-prog-pct{font-size:clamp(14px,1.3vw,20px);font-weight:700;color:var(--maroon);}
+.works-bar-bg{height:8px;background:var(--light-gray);border-radius:4px;overflow:hidden;}
+.works-bar-fill{height:100%;border-radius:4px;background:var(--maroon);transition:width 0.9s ease;}
+.works-bar-fill.green{background:var(--green);}
+.works-bar-fill.amber{background:var(--amber);}
+.works-bar-fill.red{background:var(--red);}
+.works-sub{font-size:clamp(7px,0.57vw,9px);color:var(--text-light);margin-top:5px;}
+
+/* ── MEMO SLIDE ── */
+.memo-wrap{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:22px 28px;box-shadow:var(--card-shadow);flex:1;display:flex;flex-direction:column;gap:16px;overflow:auto;}
+.memo-header{border-bottom:2px solid var(--maroon);padding-bottom:12px;margin-bottom:4px;}
+.memo-title{font-family:'DM Serif Display',serif;font-size:clamp(18px,2vw,30px);color:var(--maroon);}
+.memo-meta{font-size:clamp(8px,0.62vw,10px);color:var(--text-light);letter-spacing:2px;text-transform:uppercase;margin-top:3px;}
+.memo-point{display:flex;gap:14px;align-items:flex-start;}
+.memo-point-num{font-family:'DM Serif Display',serif;font-size:clamp(20px,2.2vw,34px);color:rgba(122,26,20,0.12);line-height:1;flex-shrink:0;min-width:2ch;}
+.memo-point-body{flex:1;}
+.memo-point-label{font-size:clamp(7px,0.58vw,9px);font-weight:700;color:var(--maroon);text-transform:uppercase;letter-spacing:2px;margin-bottom:3px;}
+.memo-point-text{font-size:clamp(9px,0.72vw,11.5px);color:var(--text-dark);line-height:1.8;}
+
+/* ── LOADING SKELETON ── */
+.skeleton{display:none;width:100%;border-radius:var(--slide-radius);overflow:hidden;background:rgba(20,8,6,0.6);box-shadow:0 40px 120px rgba(0,0,0,0.8);min-height:calc((100vw - 40px)*9/16);position:relative;}
+.skeleton.active{display:block;}
+@keyframes pulse{0%,100%{opacity:0.4;}50%{opacity:0.7;}}
+.skel-bar{background:rgba(122,26,20,0.3);border-radius:4px;animation:pulse 1.5s ease-in-out infinite;}
+.skel-header{height:44px;background:rgba(122,26,20,0.4);margin-bottom:16px;}
+.skel-body{padding:16px 24px;display:flex;flex-direction:column;gap:14px;}
+.skel-row{display:flex;gap:12px;}
+.skel-card{flex:1;height:90px;background:rgba(255,255,255,0.06);border-radius:6px;animation:pulse 1.5s ease-in-out infinite;}
+.skel-chart{flex:1.4;height:160px;background:rgba(255,255,255,0.06);border-radius:6px;animation:pulse 1.5s ease-in-out infinite;}
+.skel-side{flex:1;height:160px;background:rgba(255,255,255,0.06);border-radius:6px;animation:pulse 1.5s ease-in-out infinite;}
+
+/* ── DOT NAV ── */
+.dot-nav{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:100;}
+.dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);cursor:pointer;transition:all 0.2s;}
+.dot.active{background:var(--maroon);border-color:var(--maroon-light);width:20px;border-radius:4px;}
+.dot:hover:not(.active){background:rgba(255,255,255,0.35);}
+
+/* ── PROGRESS BAR ── */
+.progress-bar{position:fixed;bottom:0;left:0;height:3px;background:linear-gradient(90deg,var(--maroon),var(--maroon-light));transition:width 0.3s ease;z-index:200;box-shadow:0 0 10px rgba(158,34,25,0.5);}
+
+/* ── TOOLTIP ── */
+.chart-tooltip{position:fixed;background:rgba(15,5,4,0.94);color:white;border-radius:4px;padding:7px 13px;font-size:11px;pointer-events:none;z-index:9999;opacity:0;transition:opacity 0.1s;white-space:nowrap;border:1px solid rgba(255,255,255,0.08);box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+.chart-tooltip.show{opacity:1;}
+
+/* ── PRINT ── */
+@media print{
+  body{background:white!important;}
+  .nav,.period-bar,.progress-bar,.dot-nav{display:none!important;}
+  .slides-wrapper{margin-top:0!important;max-width:100%!important;padding:0!important;}
+  .slide{display:flex!important;page-break-after:always;page-break-inside:avoid;border-radius:0!important;box-shadow:none!important;}
+}
+</style>
+</head>
+<body>
+
+<div class="chart-tooltip" id="globalTooltip"></div>
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <span class="nav-brand">Nandi Meraki &nbsp;·&nbsp; FM Report</span>
+  <div class="nav-controls">
+    <button class="nav-btn" onclick="prevSlide()">← Prev</button>
+    <span class="slide-counter" id="counter">1 / 8</span>
+    <button class="nav-btn" onclick="nextSlide()">Next →</button>
+    <button class="nav-btn" onclick="window.print()">↓ PDF</button>
+  </div>
+</nav>
+
+<!-- ── PERIOD SELECTOR ── -->
+<div class="period-bar" id="periodBar">
+  <div class="period-group">
+    <span class="period-group-label">Quarter</span>
+    <button class="period-pill" data-period="Q3 2025" onclick="selectPeriod(this)">Q3 2025</button>
+    <button class="period-pill" data-period="Q4 2025" onclick="selectPeriod(this)">Q4 2025</button>
+    <button class="period-pill" data-period="Q1 2026" onclick="selectPeriod(this)">Q1 2026</button>
+  </div>
+  <div class="period-divider"></div>
+  <div class="period-group">
+    <span class="period-group-label">Month</span>
+    <button class="period-pill" data-period="Oct" onclick="selectPeriod(this)">Oct</button>
+    <button class="period-pill" data-period="Nov" onclick="selectPeriod(this)">Nov</button>
+    <button class="period-pill" data-period="Dec" onclick="selectPeriod(this)">Dec</button>
+    <button class="period-pill" data-period="Jan" onclick="selectPeriod(this)">Jan</button>
+    <button class="period-pill" data-period="Feb" onclick="selectPeriod(this)">Feb</button>
+    <button class="period-pill" data-period="Mar" onclick="selectPeriod(this)">Mar</button>
+    <button class="period-pill" data-period="Apr" onclick="selectPeriod(this)">Apr</button>
+  </div>
+  <button class="generate-btn" id="generateBtn" onclick="generateReport()">Generate →</button>
+</div>
+
+<!-- ── SLIDES WRAPPER ── -->
+<div class="slides-wrapper" id="slidesWrapper">
+
+  <!-- LOADING SKELETON -->
+  <div class="skeleton" id="skeleton">
+    <div class="skel-header skel-bar"></div>
+    <div class="skel-body">
+      <div class="skel-row">
+        <div class="skel-card skel-bar"></div>
+        <div class="skel-card skel-bar"></div>
+        <div class="skel-card skel-bar"></div>
+        <div class="skel-card skel-bar"></div>
+      </div>
+      <div class="skel-row">
+        <div class="skel-chart skel-bar"></div>
+        <div class="skel-side skel-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 1: COVER -->
+  <div class="slide slide-cover" id="slide-1">
+    <div class="cover-bg-pattern"></div>
+    <div class="cover-grid-lines"></div>
+    <div class="cover-diagonal"></div>
+    <div class="cover-accent-line"></div>
+    <div class="cover-watermark" id="coverWatermark">Q4</div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;max-width:58%;">
+      <div class="cover-eyebrow">Facility Management Report</div>
+      <div class="cover-title">Nandi<br>Meraki<br><em id="coverPeriodItalic">Q4 2025</em></div>
+      <div class="cover-subtitle" id="coverDates">January · February · March</div>
+      <div class="cover-summary" id="coverSummary">Loading analysis…</div>
+      <div class="cover-meta" id="coverGenDate"></div>
+      <div class="cover-stats-row" id="coverStats"></div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: EXECUTIVE SCORECARD -->
+  <div class="slide slide-offwhite" id="slide-2">
+    <div class="slide-header">
+      <span class="slide-header-title">Executive Scorecard</span>
+      <span class="slide-header-tag" id="s2tag">FM Performance Review</span>
+    </div>
+    <div class="slide-body">
+      <div class="scorecard-grid" id="scorecardGrid">
+        <!-- Filled by JS -->
+      </div>
+      <div class="kpi-chips" id="kpiChips">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: MAINTENANCE & COSTS -->
+  <div class="slide slide-white" id="slide-3">
+    <div class="slide-header">
+      <span class="slide-header-title">Maintenance & Costs</span>
+      <span class="slide-header-tag" id="s3tag">Cost Analysis</span>
+    </div>
+    <div class="slide-body">
+      <div class="kpi-row" id="s3kpis"></div>
+      <div class="slide-body-row">
+        <div class="col-left">
+          <div class="section-title">Cost per Sqft — Monthly Trend</div>
+          <div class="chart-wrap" style="flex:1;">
+            <div class="chart-canvas-wrap" id="costChart"><div class="no-data-msg">No data for this period</div></div>
+          </div>
+        </div>
+        <div class="col-right">
+          <div class="section-title">Top Expense Categories</div>
+          <div class="chart-wrap" style="flex:1;">
+            <div class="chart-canvas-wrap" id="expenseChart"><div class="no-data-msg">No data for this period</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="highlight-box" id="s3insight"></div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: TICKETS & RESOLUTION -->
+  <div class="slide slide-white" id="slide-4">
+    <div class="slide-header">
+      <span class="slide-header-title">Tickets & Resolution</span>
+      <span class="slide-header-tag" id="s4tag">Maintenance Tracking</span>
+    </div>
+    <div class="slide-body">
+      <div class="kpi-row" id="s4kpis"></div>
+      <div class="slide-body-row">
+        <div class="col-left">
+          <div class="section-title">Tickets Received vs Closed — by Month</div>
+          <div class="chart-wrap" style="flex:1;">
+            <div class="chart-canvas-wrap" id="ticketChart"><div class="no-data-msg">No data for this period</div></div>
+          </div>
+        </div>
+        <div class="col-right">
+          <div class="section-title">Ticket Categories by Volume</div>
+          <div class="chart-wrap" style="flex:1;">
+            <div class="chart-canvas-wrap" id="ticketCatChart"><div class="no-data-msg">No data for this period</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="highlight-box" id="s4insight"></div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: HANDOVER & OCCUPANCY -->
+  <div class="slide slide-white" id="slide-5">
+    <div class="slide-header">
+      <span class="slide-header-title">Handover & Occupancy</span>
+      <span class="slide-header-tag" id="s5tag">Ramp Tracking</span>
+    </div>
+    <div class="slide-body">
+      <div class="kpi-row" id="s5kpis"></div>
+      <div class="slide-body-row">
+        <div class="col-left">
+          <div class="section-title">Units Handed Over vs Occupied — by Month</div>
+          <div class="chart-wrap" style="flex:1;">
+            <div class="chart-canvas-wrap" id="handoverChart"><div class="no-data-msg">No data for this period</div></div>
+          </div>
+        </div>
+        <div class="col-right" style="justify-content:center;gap:14px;">
+          <div class="kpi-card blue" id="s5occCard" style="flex:0 0 auto;">
+            <div class="kpi-label">Occupancy Rate</div>
+            <div class="kpi-val" id="s5occRate">—</div>
+            <div class="kpi-sub">vs 60% benchmark</div>
+            <span class="kpi-delta" id="s5occDelta"></span>
+          </div>
+          <div class="kpi-card green" id="s5handCard" style="flex:0 0 auto;">
+            <div class="kpi-label">Total Units Occupied</div>
+            <div class="kpi-val" id="s5totalOcc">—</div>
+            <div class="kpi-sub" id="s5handSub"></div>
+          </div>
+          <div class="highlight-box" id="s5insight"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: SUSTAINABILITY & INFRASTRUCTURE -->
+  <div class="slide slide-offwhite" id="slide-6">
+    <div class="slide-header">
+      <span class="slide-header-title">Sustainability & Infrastructure</span>
+      <span class="slide-header-tag" id="s6tag">Systems Status</span>
+    </div>
+    <div class="slide-body">
+      <div class="sustain-grid" id="sustainGrid"></div>
+      <div class="highlight-box" id="s6insight"></div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: WORKS TRACKER -->
+  <div class="slide slide-white" id="slide-7">
+    <div class="slide-header">
+      <span class="slide-header-title">Works Tracker</span>
+      <span class="slide-header-tag" id="s7tag">Progress Report</span>
+    </div>
+    <div class="slide-body">
+      <div class="slide-body-row">
+        <div class="col-left" style="gap:14px;">
+          <div class="section-title">East Block</div>
+          <div class="works-section" id="eastWorks"></div>
+          <div class="section-title" style="margin-top:4px;">South Block</div>
+          <div class="works-section" id="southWorks"></div>
+        </div>
+        <div class="col-right">
+          <div class="section-title">Weekly Activity Log</div>
+          <div id="weeklyLog" style="flex:1;background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:12px 14px;box-shadow:var(--card-shadow);overflow:auto;"></div>
+          <div class="highlight-box" id="s7insight"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: AI ANALYST MEMO -->
+  <div class="slide slide-offwhite" id="slide-8">
+    <div class="slide-header">
+      <span class="slide-header-title">FM Intelligence Memo</span>
+      <span class="slide-header-tag">AI Analysis</span>
+    </div>
+    <div class="slide-body">
+      <div class="memo-wrap" id="memoWrap">
+        <div class="memo-header">
+          <div class="memo-title">FM Intelligence Memo</div>
+          <div class="memo-meta" id="memoMeta"></div>
+        </div>
+        <div id="memoPoints"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /slides-wrapper -->
+
+<!-- DOT NAV -->
+<div class="dot-nav" id="dotNav">
+  <div class="dot active" onclick="showSlide(1)"></div>
+  <div class="dot" onclick="showSlide(2)"></div>
+  <div class="dot" onclick="showSlide(3)"></div>
+  <div class="dot" onclick="showSlide(4)"></div>
+  <div class="dot" onclick="showSlide(5)"></div>
+  <div class="dot" onclick="showSlide(6)"></div>
+  <div class="dot" onclick="showSlide(7)"></div>
+  <div class="dot" onclick="showSlide(8)"></div>
+</div>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let currentSlide = 1;
+const TOTAL_SLIDES = 8;
+let selectedPeriod = 'Q4 2025';
+let chartInstances = {};
+let currentData = null;
+let currentInsights = null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE NAVIGATION
+// ─────────────────────────────────────────────────────────────────────────────
+function showSlide(n) {
+  n = Math.max(1, Math.min(n, TOTAL_SLIDES));
+  document.querySelectorAll('.slide').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
+  const el = document.getElementById('slide-' + n);
+  if (el) { el.style.display = 'flex'; el.classList.add('active'); }
+  document.getElementById('counter').textContent = n + ' / ' + TOTAL_SLIDES;
+  document.getElementById('progressBar').style.width = ((n / TOTAL_SLIDES) * 100) + '%';
+  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === n - 1));
+  currentSlide = n;
+}
+function nextSlide() { showSlide(currentSlide + 1); }
+function prevSlide() { showSlide(currentSlide - 1); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextSlide();
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   prevSlide();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PERIOD SELECTOR
+// ─────────────────────────────────────────────────────────────────────────────
+function selectPeriod(btn) {
+  document.querySelectorAll('.period-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  selectedPeriod = btn.dataset.period;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SKELETON
+// ─────────────────────────────────────────────────────────────────────────────
+function showSkeleton() {
+  document.querySelectorAll('.slide').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
+  document.getElementById('skeleton').classList.add('active');
+}
+function hideSkeleton() {
+  document.getElementById('skeleton').classList.remove('active');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+const CHART_COLORS = {
+  maroon: '#7a1a14', maroon2: '#9e2219', green: '#0a6b6f',
+  amber: '#b8692e', blue: '#2e5d93', red: '#c62828',
+  maroonFill: 'rgba(122,26,20,0.1)', greenFill: 'rgba(10,107,111,0.1)',
+};
+
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#9c7d78';
+
+function destroyChart(id) {
+  if (chartInstances[id]) { try { chartInstances[id].destroy(); } catch(e){} delete chartInstances[id]; }
+}
+
+function hasData(arr) {
+  return Array.isArray(arr) && arr.length > 0 && arr.some(v => v > 0);
+}
+
+function clearChartWrap(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  el.innerHTML = '<div class="no-data-msg">No data for this period</div>';
+  destroyChart(id);
+  return el;
+}
+
+function makeCanvas(wrapId) {
+  destroyChart(wrapId);
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return null;
+  wrap.innerHTML = '';
+  const canvas = document.createElement('canvas');
+  wrap.appendChild(canvas);
+  return canvas;
+}
+
+function drawLineChart(wrapId, labels, datasets, opts = {}) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const anyData = datasets.some(ds => hasData(ds.data));
+  if (!anyData) { clearChartWrap(wrapId); return; }
+  const canvas = makeCanvas(wrapId);
+  chartInstances[wrapId] = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets: datasets.map(ds => ({
+      ...ds,
+      borderWidth: 2.5, pointRadius: 5, pointHoverRadius: 7,
+      pointBackgroundColor: ds.borderColor,
+      pointBorderColor: 'white', pointBorderWidth: 2.5,
+      tension: 0.3, fill: false,
+    }))},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: datasets.length > 1, position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { grid: { color: '#f0ebe8' }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: '#f0ebe8' }, ticks: { font: { size: 10 }, callback: opts.yFmt || (v => v) },
+          ...(opts.yMin !== undefined ? { min: opts.yMin } : {}) },
+      },
+      ...( opts.annotations ? { plugins: { ...this?.options?.plugins, annotation: opts.annotations } } : {} ),
+    },
+  });
+  // Draw dashed goal line if requested
+  if (opts.goalLine !== undefined) {
+    const plugin = {
+      id: 'goalLine_' + wrapId,
+      afterDraw(chart) {
+        const { ctx, scales: { y }, chartArea: { left, right } } = chart;
+        const yVal = opts.goalLine;
+        if (!y || y.getPixelForValue(yVal) === undefined) return;
+        const yPx = y.getPixelForValue(yVal);
+        ctx.save();
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = CHART_COLORS.red;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(left, yPx);
+        ctx.lineTo(right, yPx);
+        ctx.stroke();
+        ctx.restore();
+      }
+    };
+    Chart.register(plugin);
+    chartInstances[wrapId].update();
+  }
+}
+
+function drawBarChart(wrapId, labels, datasets) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const anyData = datasets.some(ds => hasData(ds.data));
+  if (!anyData) { clearChartWrap(wrapId); return; }
+  const canvas = makeCanvas(wrapId);
+  chartInstances[wrapId] = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets: datasets.map(ds => ({ ...ds, borderRadius: 3, borderSkipped: false })) },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: datasets.length > 1, position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: '#f0ebe8' }, ticks: { font: { size: 10 } }, beginAtZero: true },
+      },
+    },
+  });
+}
+
+function drawHBarChart(wrapId, items) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  if (!items || items.length === 0 || !items.some(i => i.value > 0)) { clearChartWrap(wrapId); return; }
+  const canvas = makeCanvas(wrapId);
+  chartInstances[wrapId] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: items.map(i => i.label),
+      datasets: [{ data: items.map(i => i.value), backgroundColor: items.map((_, idx) => {
+        const colors = [CHART_COLORS.maroon, CHART_COLORS.maroon2, CHART_COLORS.amber, CHART_COLORS.blue, CHART_COLORS.green, '#8fb3d9', '#4a9e53', '#c8a97d'];
+        return colors[idx % colors.length];
+      }), borderRadius: 3 }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.raw.toLocaleString('en-IN') } } },
+      scales: {
+        x: { grid: { color: '#f0ebe8' }, ticks: { font: { size: 10 } }, beginAtZero: true },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SAFE ACCESSORS
+// ─────────────────────────────────────────────────────────────────────────────
+function safe(v, fallback = 0) { return (v !== null && v !== undefined && !isNaN(v)) ? v : fallback; }
+function safeStr(v, fallback = '—') { return (v && String(v).trim() !== '' && v !== 'N/A') ? String(v).trim() : fallback; }
+function fmt(n) { return Number(n).toLocaleString('en-IN'); }
+function fmtRupee(n) { return '₹' + fmt(n); }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function renderSlide1(data, insights) {
+  const period = data.period || selectedPeriod;
+  // Watermark: short version
+  const wm = period.replace(' 2025','').replace(' 2026','');
+  document.getElementById('coverWatermark').textContent = wm;
+  document.getElementById('coverPeriodItalic').textContent = period;
+  document.getElementById('coverDates').textContent = data.periodDates || '';
+  document.getElementById('coverSummary').textContent = insights.coverSummary || 'FM performance data loaded.';
+  const now = new Date();
+  document.getElementById('coverGenDate').textContent = 'Generated ' + now.toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' }) + ' · ' + now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+
+  // Stats row
+  const rr = safe(data.tickets?.resolutionRate);
+  const cpSqft = safe(data.maintenance?.avgCostPerSqft);
+  const occ = safe(data.handover?.occupancyRate);
+  const hs = safe(insights.healthScore);
+  document.getElementById('coverStats').innerHTML = `
+    <div class="cover-stat"><div class="cover-stat-val">${hs}</div><div class="cover-stat-label">Health Score</div></div>
+    <div class="cover-stat"><div class="cover-stat-val">${rr}%</div><div class="cover-stat-label">Resolution Rate</div></div>
+    <div class="cover-stat"><div class="cover-stat-val">₹${cpSqft.toFixed(1)}</div><div class="cover-stat-label">Cost / Sqft</div></div>
+    <div class="cover-stat"><div class="cover-stat-val">${occ}%</div><div class="cover-stat-label">Occupancy Rate</div></div>
+  `;
+}
+
+function renderSlide2(data, insights) {
+  document.getElementById('s2tag').textContent = data.periodLabel || selectedPeriod;
+  const goals = insights.goals || { met: [], partial: [], missed: [] };
+
+  const renderCol = (items, cls, emptyText) => {
+    if (!items || items.length === 0) return `<div class="scorecard-empty">${emptyText}</div>`;
+    return items.map(g => `<div class="scorecard-item ${cls}">${g}</div>`).join('');
+  };
+
+  document.getElementById('scorecardGrid').innerHTML = `
+    <div class="scorecard-col">
+      <div class="scorecard-col-header green-hdr">✓ Fully Achieved</div>
+      <div class="scorecard-col-body">${renderCol(goals.met, 'green', 'No goals fully met this period')}</div>
+    </div>
+    <div class="scorecard-col">
+      <div class="scorecard-col-header amber-hdr">◑ Mostly On Track</div>
+      <div class="scorecard-col-body">${renderCol(goals.partial, 'amber', 'No goals in partial status')}</div>
+    </div>
+    <div class="scorecard-col">
+      <div class="scorecard-col-header red-hdr">✗ Needs Attention</div>
+      <div class="scorecard-col-body">${renderCol(goals.missed, 'red', 'No critical issues identified')}</div>
+    </div>
+  `;
+
+  const rr = safe(data.tickets?.resolutionRate);
+  const cpSqft = safe(data.maintenance?.avgCostPerSqft);
+  const occ = safe(data.handover?.occupancyRate);
+  const hs = safe(insights.healthScore);
+
+  const rrColor  = rr  >= 85 ? 'green' : rr  >= 70 ? 'amber' : 'red';
+  const cpsColor = cpSqft > 0 && cpSqft <= 5 ? 'green' : cpSqft <= 6 ? 'amber' : 'red';
+  const occColor = occ >= 60 ? 'green' : occ >= 45 ? 'amber' : 'red';
+  const hsColor  = hs  >= 75 ? 'green' : hs  >= 50 ? 'amber' : 'red';
+
+  document.getElementById('kpiChips').innerHTML = `
+    <div class="kpi-chip ${hsColor}">
+      <div class="chip-val">${hs}</div>
+      <div class="chip-label">FM Health Score</div>
+      <div class="chip-bench">Out of 100 &nbsp;·&nbsp; Trend: ${safeStr(insights.healthScoreTrend)}</div>
+    </div>
+    <div class="kpi-chip ${rrColor}">
+      <div class="chip-val">${rr}%</div>
+      <div class="chip-label">Ticket Resolution Rate</div>
+      <div class="chip-bench">Benchmark: 85%+</div>
+    </div>
+    <div class="kpi-chip ${cpsColor}">
+      <div class="chip-val">₹${cpSqft.toFixed(1)}</div>
+      <div class="chip-label">Cost per Sqft</div>
+      <div class="chip-bench">Target: ₹5/sqft</div>
+    </div>
+    <div class="kpi-chip ${occColor}">
+      <div class="chip-val">${occ}%</div>
+      <div class="chip-label">Occupancy Rate</div>
+      <div class="chip-bench">Benchmark: 60%+</div>
+    </div>
+  `;
+}
+
+function renderSlide3(data, insights) {
+  document.getElementById('s3tag').textContent = data.periodLabel || selectedPeriod;
+  const cpSqft  = data.maintenance?.costPerSqft || [];
+  const months  = data.months || [];
+  const expCats = (data.expenses?.categories || []).slice(0, 7);
+  const total   = safe(data.expenses?.total);
+  const avg     = safe(data.maintenance?.avgCostPerSqft);
+  const goalLine = safe(data.maintenance?.goalLine, 5);
+
+  // KPI row
+  const prevDiff = avg > 0 && goalLine > 0 ? ((avg - goalLine) / goalLine * 100).toFixed(0) : null;
+  const cpsColor = avg > 0 && avg <= goalLine ? 'green' : avg <= goalLine * 1.2 ? 'amber' : 'red';
+  document.getElementById('s3kpis').innerHTML = `
+    <div class="kpi-card ${cpsColor}">
+      <div class="kpi-label">Avg Cost / Sqft</div>
+      <div class="kpi-val">₹${avg.toFixed(2)}</div>
+      <div class="kpi-sub">Target: ₹${goalLine}/sqft</div>
+      ${prevDiff !== null ? `<span class="kpi-delta ${avg <= goalLine ? 'delta-up' : 'delta-down'}">${avg <= goalLine ? '↓' : '↑'} ${Math.abs(prevDiff)}% vs target</span>` : ''}
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Total Expenses</div>
+      <div class="kpi-val" style="font-size:clamp(18px,2vw,30px);">${fmtRupee(total)}</div>
+      <div class="kpi-sub">${months.length > 1 ? months.length + '-month period' : months[0] || ''}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Top Category</div>
+      <div class="kpi-val" style="font-size:clamp(14px,1.4vw,22px);">${expCats[0]?.name || '—'}</div>
+      <div class="kpi-sub">${expCats[0] ? fmtRupee(expCats[0].amount) : ''}</div>
+    </div>
+  `;
+
+  // Cost per sqft line chart
+  if (hasData(cpSqft)) {
+    drawLineChart('costChart', months, [{
+      label: 'Cost/Sqft (₹)',
+      data: cpSqft,
+      borderColor: CHART_COLORS.maroon,
+      backgroundColor: CHART_COLORS.maroonFill,
+    }], { yFmt: v => '₹' + v, goalLine });
+  } else {
+    clearChartWrap('costChart');
+  }
+
+  // Expense categories bar
+  if (expCats.length > 0) {
+    drawHBarChart('expenseChart', expCats.map(c => ({ label: c.name, value: c.amount })));
+  } else {
+    clearChartWrap('expenseChart');
+  }
+
+  document.getElementById('s3insight').innerHTML = `<strong>Cost insight:</strong> ${safeStr(insights.slide3Insight, 'Analysis unavailable.')}`;
+}
+
+function renderSlide4(data, insights) {
+  document.getElementById('s4tag').textContent = data.periodLabel || selectedPeriod;
+  const rcvd   = data.tickets?.received || [];
+  const closed = data.tickets?.closed   || [];
+  const months = data.months || [];
+  const rr     = safe(data.tickets?.resolutionRate);
+  const cats   = (data.tickets?.categories || []).slice(0, 7);
+  const top    = safeStr(data.tickets?.topCategory);
+
+  const rrColor = rr >= 85 ? 'green' : rr >= 70 ? 'amber' : 'red';
+  const totalR  = safe(data.tickets?.totalReceived);
+  const totalC  = safe(data.tickets?.totalClosed);
+
+  document.getElementById('s4kpis').innerHTML = `
+    <div class="kpi-card ${rrColor}">
+      <div class="kpi-label">Resolution Rate</div>
+      <div class="kpi-val">${rr}%</div>
+      <div class="kpi-sub">Benchmark: 85%+</div>
+      <span class="kpi-delta ${rr>=85?'delta-up':rr>=70?'delta-neutral':'delta-down'}">${rr>=85?'Above benchmark':rr>=70?'Near benchmark':'Below benchmark'}</span>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-label">Total Received</div>
+      <div class="kpi-val" style="font-size:clamp(18px,2vw,30px);">${fmt(totalR)}</div>
+      <div class="kpi-sub">${months.length > 1 ? months.join(' + ') : months[0] || ''}</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Total Closed</div>
+      <div class="kpi-val" style="font-size:clamp(18px,2vw,30px);">${fmt(totalC)}</div>
+      <div class="kpi-sub">${totalR > totalC ? (totalR - totalC) + ' outstanding' : 'All resolved'}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Most Recurring</div>
+      <div class="kpi-val" style="font-size:clamp(14px,1.4vw,22px);">${top}</div>
+      <div class="kpi-sub">${cats[0] ? cats[0].count + ' tickets' : ''}</div>
+    </div>
+  `;
+
+  // Grouped bar: received vs closed
+  if (hasData(rcvd) || hasData(closed)) {
+    drawBarChart('ticketChart', months, [
+      { label: 'Received', data: rcvd, backgroundColor: CHART_COLORS.maroon },
+      { label: 'Closed',   data: closed, backgroundColor: CHART_COLORS.green },
+    ]);
+  } else {
+    clearChartWrap('ticketChart');
+  }
+
+  // Category bar
+  if (cats.length > 0) {
+    drawHBarChart('ticketCatChart', cats.map(c => ({ label: c.name, value: c.count })));
+  } else {
+    clearChartWrap('ticketCatChart');
+  }
+
+  document.getElementById('s4insight').innerHTML = `<strong>Ticket insight:</strong> ${safeStr(insights.slide4Insight, 'Analysis unavailable.')}`;
+}
+
+function renderSlide5(data, insights) {
+  document.getElementById('s5tag').textContent = data.periodLabel || selectedPeriod;
+  const ho    = data.handover?.handedOver || [];
+  const occ   = data.handover?.occupied   || [];
+  const months = data.months || [];
+  const occRate = safe(data.handover?.occupancyRate);
+  const totO  = safe(data.handover?.totalOccupied);
+  const totH  = safe(data.handover?.totalHandedOver);
+  const bench = safe(data.handover?.benchmarkRate, 60);
+
+  const occColor = occRate >= bench ? 'green' : occRate >= bench * 0.75 ? 'amber' : 'red';
+
+  // Update cards
+  document.getElementById('s5occRate').textContent = occRate + '%';
+  const occDelta = document.getElementById('s5occDelta');
+  if (occRate >= bench) {
+    occDelta.className = 'kpi-delta delta-up';
+    occDelta.textContent = '↑ Above ' + bench + '% benchmark';
+  } else {
+    occDelta.className = 'kpi-delta delta-down';
+    occDelta.textContent = '↓ Below ' + bench + '% benchmark';
+  }
+  document.getElementById('s5occCard').className = 'kpi-card ' + occColor;
+  document.getElementById('s5totalOcc').textContent = fmt(totO);
+  document.getElementById('s5handSub').textContent = totH > 0 ? 'of ' + fmt(totH) + ' handed over' : '';
+
+  // Grouped bar
+  if (hasData(ho) || hasData(occ)) {
+    drawBarChart('handoverChart', months, [
+      { label: 'Handed Over', data: ho,  backgroundColor: CHART_COLORS.blue },
+      { label: 'Occupied',    data: occ, backgroundColor: CHART_COLORS.green },
+    ]);
+  } else {
+    clearChartWrap('handoverChart');
+  }
+
+  document.getElementById('s5insight').innerHTML = `<strong>Occupancy insight:</strong> ${safeStr(insights.slide5Insight, 'Analysis unavailable.')}`;
+}
+
+function renderSlide6(data, insights) {
+  document.getElementById('s6tag').textContent = data.periodLabel || selectedPeriod;
+  const systemsFromData = data.sustainability || [];
+  const insg = insights.sustainability || {};
+
+  const SUSTAIN_KEYS = ['ecoSTP', 'solar', 'heatPump', 'hasirudala', 'waterTreatment', 'implementationIdeas'];
+  const SUSTAIN_LABELS = {
+    ecoSTP: 'Eco-STP', solar: 'Solar Net Metering', heatPump: 'Heat Pump',
+    hasirudala: 'Hasirudala Waste', waterTreatment: 'Water Treatment / WTP',
+    implementationIdeas: 'Implementation Ideas',
+  };
+
+  const cards = SUSTAIN_KEYS.map(k => {
+    const fromData    = systemsFromData.find(s => s.key === k) || {};
+    const fromInsight = insg[k] || {};
+    const status  = fromInsight.status  || fromData.status  || 'Partial';
+    const note    = fromInsight.note    || fromData.rawValue || 'Status data unavailable.';
+    const label   = SUSTAIN_LABELS[k] || k;
+    const badgeCls = status === 'Operational' ? 'badge-green' : status === 'Partial' ? 'badge-amber' : 'badge-red';
+    return `
+      <div class="sustain-card">
+        <div class="sustain-card-name">${label}</div>
+        <span class="badge ${badgeCls}">${status}</span>
+        <div class="sustain-card-note">${note}</div>
+      </div>`;
+  });
+
+  document.getElementById('sustainGrid').innerHTML = cards.join('');
+
+  const opCount = SUSTAIN_KEYS.filter(k => {
+    const s = systemsFromData.find(x => x.key === k);
+    const si = insg[k];
+    return (si?.status || s?.status) === 'Operational';
+  }).length;
+  document.getElementById('s6insight').innerHTML = `<strong>Infrastructure:</strong> ${opCount} of ${SUSTAIN_KEYS.length} systems fully operational. ${safeStr(insights.slide7Insight && opCount < SUSTAIN_KEYS.length ? '' : '', '')}`;
+}
+
+function renderSlide7(data, insights) {
+  document.getElementById('s7tag').textContent = data.periodLabel || selectedPeriod;
+  const east  = data.works?.eastBlock  || { completed: 0, total: 0, pct: 0 };
+  const south = data.works?.southBlock || { completed: 0, total: 0, pct: 0 };
+  const weekly = data.weekly || [];
+
+  const worksBlock = (block, label) => {
+    const pct = safe(block.pct);
+    const barColor = pct >= 80 ? 'green' : pct >= 50 ? 'amber' : 'red';
+    return `
+      <div class="works-title">${label}</div>
+      <div class="works-progress-wrap">
+        <div class="works-prog-header">
+          <span class="works-prog-label">${block.completed || 0} of ${block.total || 0} works completed</span>
+          <span class="works-prog-pct">${pct}%</span>
+        </div>
+        <div class="works-bar-bg">
+          <div class="works-bar-fill ${barColor}" style="width:${Math.min(pct,100)}%"></div>
+        </div>
+        <div class="works-sub">${block.total > 0 ? (block.total - block.completed) + ' works remaining' : 'No works data available'}</div>
+      </div>
+    `;
+  };
+
+  document.getElementById('eastWorks').innerHTML  = worksBlock(east,  'East Block');
+  document.getElementById('southWorks').innerHTML = worksBlock(south, 'South Block');
+
+  // Weekly log
+  const logEl = document.getElementById('weeklyLog');
+  if (weekly.length === 0) {
+    logEl.innerHTML = '<div style="color:var(--text-light);font-size:11px;font-style:italic;padding:8px;">No weekly updates for this period.</div>';
+  } else {
+    logEl.innerHTML = weekly.slice(0, 10).map(w => {
+      const stColor = w.status?.toLowerCase().includes('done') || w.status?.toLowerCase().includes('complete') ? 'var(--green)' : w.status?.toLowerCase().includes('pending') ? 'var(--amber)' : 'var(--text-mid)';
+      return `<div style="padding:7px 0;border-bottom:1px solid #f0ebe8;font-size:clamp(8px,0.65vw,10.5px);">
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+          <span style="font-weight:600;color:var(--text-dark);">${safeStr(w.topic)}</span>
+          <span style="font-size:clamp(7px,0.55vw,9px);color:${stColor};font-weight:700;">${safeStr(w.status)}</span>
+        </div>
+        <div style="color:var(--text-light);font-size:clamp(7px,0.55vw,9px);">${safeStr(w.week)} · ${safeStr(w.date)}</div>
+        ${w.notes && w.notes !== '—' ? `<div style="color:var(--text-mid);margin-top:2px;font-size:clamp(7px,0.55vw,9px);line-height:1.5;">${w.notes}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('s7insight').innerHTML = `<strong>Works tracker:</strong> ${safeStr(insights.slide7Insight, 'Analysis unavailable.')}`;
+}
+
+function renderSlide8(data, insights) {
+  const memo = insights.memo || {};
+  document.getElementById('memoMeta').textContent = (data.periodLabel || selectedPeriod) + ' · ' + new Date().toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
+
+  const POINT_LABELS = [
+    'What went well',
+    'Biggest risk or concern',
+    'Pattern emerging',
+    'Recommendation for next period',
+    'Metric to watch',
+  ];
+
+  const points = ['point1','point2','point3','point4','point5'].map((k, i) => {
+    const text = safeStr(memo[k], 'Analysis unavailable.');
+    return `
+      <div class="memo-point">
+        <div class="memo-point-num">0${i+1}</div>
+        <div class="memo-point-body">
+          <div class="memo-point-label">${POINT_LABELS[i]}</div>
+          <div class="memo-point-text">${text}</div>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('memoPoints').innerHTML = points.join('');
+}
+
+function renderAllSlides(data, insights) {
+  try { renderSlide1(data, insights); } catch(e) { console.warn('Slide 1 render error:', e); }
+  try { renderSlide2(data, insights); } catch(e) { console.warn('Slide 2 render error:', e); }
+  try { renderSlide3(data, insights); } catch(e) { console.warn('Slide 3 render error:', e); }
+  try { renderSlide4(data, insights); } catch(e) { console.warn('Slide 4 render error:', e); }
+  try { renderSlide5(data, insights); } catch(e) { console.warn('Slide 5 render error:', e); }
+  try { renderSlide6(data, insights); } catch(e) { console.warn('Slide 6 render error:', e); }
+  try { renderSlide7(data, insights); } catch(e) { console.warn('Slide 7 render error:', e); }
+  try { renderSlide8(data, insights); } catch(e) { console.warn('Slide 8 render error:', e); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GENERATE REPORT
+// ─────────────────────────────────────────────────────────────────────────────
+async function generateReport() {
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  showSkeleton();
+
+  let sheetData = null;
+  let insights = {
+    healthScore: 0, healthScoreTrend: '—',
+    coverSummary: 'Data loaded — analysis unavailable.',
+    goals: { met: [], partial: [], missed: [] },
+    slide3Insight: 'Analysis unavailable.',
+    slide4Insight: 'Analysis unavailable.',
+    slide5Insight: 'Analysis unavailable.',
+    sustainability: {},
+    slide7Insight: 'Analysis unavailable.',
+    memo: { point1:'—', point2:'—', point3:'—', point4:'—', point5:'—' },
+  };
+
+  // Layer 1 — Sheets
+  try {
+    const resp = await fetch('/api/sheets?period=' + encodeURIComponent(selectedPeriod));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    sheetData = await resp.json();
+  } catch(err) {
+    console.error('Sheets fetch error:', err);
+    sheetData = {
+      period: selectedPeriod, periodLabel: selectedPeriod, periodDates: selectedPeriod,
+      months: ['Jan','Feb','Mar'],
+      plan: { costPerSqft:5, ticketResolutionRate:85, occupancyRate:60 },
+      maintenance: { costPerSqft:[], avgCostPerSqft:0, goalLine:5, invoicesSent:[] },
+      expenses: { total:0, categories:[] },
+      tickets: { received:[], closed:[], totalReceived:0, totalClosed:0, resolutionRate:0, categories:[], topCategory:'N/A' },
+      handover: { handedOver:[], occupied:[], totalHandedOver:0, totalOccupied:0, occupancyRate:0, benchmarkRate:60 },
+      sustainability: [],
+      works: { eastBlock:{completed:0,total:0,pct:0}, southBlock:{completed:0,total:0,pct:0} },
+      weekly: [],
+      _error: err.message,
+    };
+  }
+
+  // Layer 2 — Haiku analysis (non-blocking — render data first)
+  hideSkeleton();
+  currentData = sheetData;
+  currentInsights = insights;
+  renderAllSlides(sheetData, insights);
+  showSlide(1);
+  btn.disabled = false;
+  btn.textContent = 'Generate →';
+
+  // Now fetch analysis (updates slides when done)
+  try {
+    const aresp = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: sheetData, period: selectedPeriod }),
+    });
+    if (aresp.ok) {
+      const ai = await aresp.json();
+      if (ai && typeof ai === 'object' && !ai._error && !ai._parseError) {
+        insights = ai;
+        currentInsights = insights;
+        renderAllSlides(sheetData, insights);
+        showSlide(currentSlide);
+      }
+    }
+  } catch(err) {
+    console.warn('Analysis fetch error (non-fatal):', err);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT — auto-load most recent quarter
+// ─────────────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Auto-select most recent period: Q1 2026 (current date is May 2026)
+  const defaultPeriod = 'Q1 2026';
+  selectedPeriod = defaultPeriod;
+  document.querySelectorAll('.period-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.period === defaultPeriod);
+  });
+  showSlide(1);
+  generateReport();
+});
+</script>
+</body>
+</html>
