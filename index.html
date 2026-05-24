@@ -139,7 +139,7 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
 .footnote{font-size:clamp(7px,0.54vw,9px);color:var(--text-light);margin-top:4px;font-style:italic;flex-shrink:0;line-height:1.6;}
 
 /* ── SLIDE 2: GOALS ── */
-.scorecard-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;flex:1;min-height:0;}
+.scorecard-grid{display:flex;flex-direction:column;gap:6px;flex:1;min-height:0;overflow:hidden;}
 .scorecard-col{border-radius:var(--card-radius);overflow:hidden;box-shadow:var(--card-shadow);display:flex;flex-direction:column;}
 .scorecard-col-header{padding:10px 13px;font-size:clamp(8px,0.68vw,11px);font-weight:700;letter-spacing:0.5px;color:white;flex-shrink:0;}
 .scorecard-col-header.green-hdr{background:var(--green);}.scorecard-col-header.amber-hdr{background:var(--amber);}.scorecard-col-header.red-hdr{background:var(--red);}
@@ -157,6 +157,25 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
 .works-bar-bg{height:5px;background:var(--light-gray);border-radius:3px;overflow:hidden;margin-top:5px;}
 .works-bar-fill{height:100%;border-radius:3px;background:var(--maroon);}
 .works-bar-fill.green{background:var(--green);}.works-bar-fill.amber{background:var(--amber);}
+
+/* ── SLIDE 2: GOALS (new list layout) ── */
+.goals-strip{display:flex;gap:8px;flex-shrink:0;margin-bottom:4px;}
+.goals-strip-chip{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:8px 13px;box-shadow:var(--card-shadow);text-align:center;min-width:65px;}
+.goals-strip-val{font-size:clamp(16px,1.7vw,24px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;}
+.goals-strip-val.green{color:var(--green);}.goals-strip-val.amber{color:var(--amber);}.goals-strip-val.red{color:var(--red);}
+.goals-strip-label{font-size:clamp(7px,0.56vw,9px);color:var(--text-light);text-transform:uppercase;letter-spacing:1.5px;margin-top:3px;font-weight:600;}
+.goals-list{display:flex;flex-direction:column;gap:5px;flex:1;overflow:auto;}
+.goal-row{display:flex;flex-direction:column;gap:3px;padding:7px 10px;background:white;border-radius:4px;border:1px solid var(--mid-gray);border-left:3px solid var(--mid-gray);}
+.goal-row.met{border-left-color:var(--green);background:rgba(10,107,111,0.03);}
+.goal-row.partial{border-left-color:var(--amber);background:rgba(184,105,46,0.03);}
+.goal-row.missed{border-left-color:var(--red);background:rgba(198,40,40,0.03);}
+.goal-row-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.goal-name{font-size:clamp(8px,0.65vw,10.5px);font-weight:600;color:var(--text-dark);flex:1;}
+.goal-actual{font-size:clamp(8px,0.65vw,10.5px);font-weight:700;color:var(--text-mid);white-space:nowrap;}
+.goal-bar-bg{height:3px;background:var(--light-gray);border-radius:2px;overflow:hidden;}
+.goal-bar-fill{height:100%;border-radius:2px;transition:width 0.5s ease;}
+.goal-bar-fill.met{background:var(--green);}.goal-bar-fill.partial{background:var(--amber);}.goal-bar-fill.missed{background:var(--red);}
+.goal-sub{font-size:clamp(7px,0.55vw,8.5px);color:var(--text-light);line-height:1.4;}
 
 /* ── SLIDE 3: TICKETS ── */
 .spike-badge{display:inline-flex;align-items:center;gap:4px;background:var(--red-light);color:var(--red);font-size:clamp(7px,0.58vw,9px);font-weight:700;padding:3px 9px;border-radius:4px;margin-left:8px;}
@@ -232,7 +251,6 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
   <div class="mode-tabs">
     <button class="mode-tab active" id="tab-quarterly" onclick="setMode('quarterly')">Quarterly</button>
     <button class="mode-tab" id="tab-monthly" onclick="setMode('monthly')">Monthly</button>
-    <button class="mode-tab" id="tab-weekly" onclick="setMode('weekly')">Weekly</button>
   </div>
   <div class="period-divider"></div>
   <div class="period-pills" id="periodPills"></div>
@@ -351,9 +369,10 @@ let currentInsights= null;
 const CACHE_KEY = 'nm_fm_v4';
 
 const QUARTER_PILLS = [
-  { label:'Q3 2025 (Oct–Dec)', period:'Q3 2025', type:'quarter' },
-  { label:'Q4 2025 (Jan–Feb)', period:'Q4 2025', type:'quarter' },
-  { label:'Q1 2026 (Apr)',     period:'Q1 2026', type:'quarter' },
+  { label:'Q3 2025 (Oct–Dec)', period:'Q3 2025',  type:'quarter' },
+  { label:'Q4 2025 (Jan–Feb)', period:'Q4 2025',  type:'quarter' },
+  { label:'Q1 2026 (Apr)',     period:'Q1 2026',  type:'quarter' },
+  { label:'All Time (Oct–Apr)',period:'All Time', type:'quarter' },
 ];
 const MONTH_PILLS = [
   { label:'Oct', period:'Oct', type:'month' },
@@ -362,10 +381,6 @@ const MONTH_PILLS = [
   { label:'Jan', period:'Jan', type:'month' },
   { label:'Feb', period:'Feb', type:'month' },
   { label:'Apr', period:'Apr', type:'month' },
-];
-const WEEKLY_PILLS = [
-  { label:'Latest (12 Mar)', period:'weekly-latest',   type:'week' },
-  { label:'Previous (26 Mar)',period:'weekly-previous', type:'week' },
 ];
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -401,8 +416,11 @@ function deltaSmall(curr, prev, higherBetter=true) {
 function setMode(m) {
   mode = m;
   document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.id==='tab-'+m));
-  const pills = m==='quarterly' ? QUARTER_PILLS : m==='monthly' ? MONTH_PILLS : WEEKLY_PILLS;
-  const defaultPill = pills[pills.length-1]; // last = most recent
+  const pills = m === 'monthly' ? MONTH_PILLS : QUARTER_PILLS;
+  // Default: Q1 2026 for quarterly, Apr for monthly
+  const defaultPill = m === 'quarterly'
+    ? (pills.find(p => p.period === 'Q1 2026') || pills[pills.length-1])
+    : pills[pills.length-1];
   selectedPeriod = defaultPill.period;
   selectedType   = defaultPill.type;
   const container = document.getElementById('periodPills');
@@ -545,25 +563,43 @@ function renderSlide1(d, ins) {
 
 function renderSlide2(d, ins) {
   document.getElementById('s2tag').textContent = d.periodLabel || selectedPeriod;
-  const goals = ins.goals || { met:[], partial:[], missed:[] };
+  const goals = Array.isArray(ins.goals) ? ins.goals : [];
 
-  const col = (items, cls, empty) =>
-    items?.length ? items.map(g=>`<div class="scorecard-item ${cls}">${g}</div>`).join('') :
-    `<div class="scorecard-empty">${empty}</div>`;
+  // Count by status
+  const counts = { MET:0, PARTIAL:0, MISSED:0, NA:0 };
+  goals.forEach(g => { const s = g.status || 'NA'; counts[s] = (counts[s]||0) + 1; });
 
-  document.getElementById('scorecardGrid').innerHTML = `
-    <div class="scorecard-col">
-      <div class="scorecard-col-header green-hdr">✓ Fully Achieved</div>
-      <div class="scorecard-col-body">${col(goals.met,'green','No goals fully met this period')}</div>
-    </div>
-    <div class="scorecard-col">
-      <div class="scorecard-col-header amber-hdr">◑ In Progress</div>
-      <div class="scorecard-col-body">${col(goals.partial,'amber','No goals in partial status')}</div>
-    </div>
-    <div class="scorecard-col">
-      <div class="scorecard-col-header red-hdr">✗ Needs Attention</div>
-      <div class="scorecard-col-body">${col(goals.missed,'red','No critical issues identified')}</div>
+  // Sort MET → PARTIAL → MISSED → NA
+  const ORDER = { MET:0, PARTIAL:1, MISSED:2, NA:3 };
+  const sorted = [...goals].sort((a,b) => (ORDER[a.status]??3) - (ORDER[b.status]??3));
+
+  const CLS  = { MET:'met', PARTIAL:'partial', MISSED:'missed', NA:'' };
+  const BADGE = { MET:'badge-green', PARTIAL:'badge-amber', MISSED:'badge-red', NA:'delta-neu' };
+
+  const strip = `
+    <div class="goals-strip">
+      <div class="goals-strip-chip"><div class="goals-strip-val green">${counts.MET}</div><div class="goals-strip-label">Met</div></div>
+      <div class="goals-strip-chip"><div class="goals-strip-val amber">${counts.PARTIAL}</div><div class="goals-strip-label">Partial</div></div>
+      <div class="goals-strip-chip"><div class="goals-strip-val red">${counts.MISSED}</div><div class="goals-strip-label">Missed</div></div>
+      ${counts.NA>0?`<div class="goals-strip-chip"><div class="goals-strip-val" style="color:var(--text-mid)">${counts.NA}</div><div class="goals-strip-label">N/A</div></div>`:''}
     </div>`;
+
+  const list = sorted.length ? sorted.map(g => {
+    const cls  = CLS[g.status] || '';
+    const bc   = BADGE[g.status] || 'delta-neu';
+    const pct  = Math.max(0, Math.min(100, g.progressPct || 0));
+    return `<div class="goal-row ${cls}">
+      <div class="goal-row-top">
+        <span class="goal-name">${g.name||''}</span>
+        <span class="goal-actual">${g.actual||''}</span>
+        <span class="badge ${bc}">${g.status||'NA'}</span>
+      </div>
+      <div class="goal-bar-bg"><div class="goal-bar-fill ${cls}" style="width:${pct}%"></div></div>
+      <div class="goal-sub">${g.target||''} · ${g.benchmark||''}</div>
+    </div>`;
+  }).join('') : '<div class="scorecard-empty" style="padding:12px;">No goals data for this period.</div>';
+
+  document.getElementById('scorecardGrid').innerHTML = strip + `<div class="goals-list">${list}</div>`;
 
   // Data chips
   const east  = d.works?.eastBlock  || {};
@@ -680,7 +716,7 @@ function renderSlide4(d, ins) {
   const pest      = d.expenses?.pest      || [];
   const lineItems = d.expenses?.lineItems || [];
 
-  document.getElementById('s4total').textContent = fmtR(total);
+  document.getElementById('s4total').textContent = total > 0 ? fmtR(total) : '—';
   document.getElementById('s4period').textContent = d.periodLabel || '';
   document.getElementById('s4delta').innerHTML = prevTotal>0 ? deltaHtml(total,prevTotal,'%',false) : '';
 
@@ -807,12 +843,12 @@ function renderAll(data, insights) {
 
 // ── SLIDE NAV ─────────────────────────────────────────────────────────────────
 function slideHasData(n, d) {
-  if (!d) return n===1||n===2||n===5;
+  if (!d) return n===1||n===2||n===4||n===5;
   switch(n) {
     case 1: return true;
     case 2: return true;
     case 3: return (d.tickets?.totalReceived||0)>0;
-    case 4: return (d.expenses?.total||0)>0;
+    case 4: return true;  // always show expenses slide
     case 5: return true;
     default: return true;
   }
@@ -848,11 +884,17 @@ function rebuildDots() {
 }
 
 // ── CACHE ─────────────────────────────────────────────────────────────────────
-function saveCache(period, data, insights) {
-  try { localStorage.setItem(CACHE_KEY+'_'+period, JSON.stringify({data,insights,ts:Date.now()})); } catch(e){}
+function saveCache(period, combined) {
+  try { localStorage.setItem(CACHE_KEY+'_'+period, JSON.stringify({combined,ts:Date.now()})); } catch(e){}
 }
 function loadCache(period) {
-  try { const raw=localStorage.getItem(CACHE_KEY+'_'+period); return raw?JSON.parse(raw):null; } catch(e){return null;}
+  try {
+    const raw = localStorage.getItem(CACHE_KEY+'_'+period);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // Support both old format {data,insights} and new format {combined}
+    return parsed.combined || null;
+  } catch(e) { return null; }
 }
 
 function showToast() {
@@ -862,16 +904,27 @@ function showToast() {
 }
 
 // ── GENERATE ──────────────────────────────────────────────────────────────────
+const EMPTY_COMBINED = {
+  period:'', type:'', periodLabel:'', periodDates:'', months:[], fetchTime:'',
+  handover:    { handedOver:[], occupied:[], totalHandedOver:0, totalOccupied:0, occupancyRate:0, benchmarkRate:60 },
+  maintenance: { costPerSqft:[], avgCostPerSqft:0, goalLine:5, invoicesSent:[], totalInvoices:0 },
+  tickets:     { received:[], closed:[], totalReceived:0, totalClosed:0, resolutionRate:0, prevTotalReceived:0 },
+  expenses:    { total:0, perMonth:[], events:[], security:[], pest:[], lineItems:[] },
+  works:       { eastBlock:{done:0,total:0,pct:0}, southBlock:{done:0,total:0,pct:0}, ideas:{done:0,total:0} },
+  sustainability: [],
+  previous:    { occupancyRate:0, totalOccupied:0, totalHandedOver:0, avgCostPerSqft:0, totalExpenses:0, totalReceived:0, resolutionRate:0 },
+  healthScore: 0, healthScoreTrend: '—',
+  coverSummary: 'FM data loaded.',
+  goals: [],
+  ticketsInsight: 'Analysis unavailable.',
+  expensesInsight: 'Security fixed at ~₹1.11L/month; analysis unavailable.',
+  operationsInsight: 'Analysis unavailable.',
+  sustainabilityNotes: { heatPump:{status:'Partial',note:'Status pending.'}, hasirudala:{status:'Partial',note:'Status pending.'}, solar:{status:'Partial',note:'Status pending.'}, ecoSTP:{status:'Partial',note:'Status pending.'}, waterTreatment:{status:'Partial',note:'Status pending.'}, implementationIdeas:{status:'Partial',note:'Status pending.'} },
+  memo: { point1:'—', point2:'—', point3:'—', point4:'—', point5:'—' },
+};
+
 async function generateReport(background=false) {
   const btn = document.getElementById('generateBtn');
-
-  const FALLBACK_INS = {
-    healthScore:0, healthScoreTrend:'—', coverSummary:'FM data loaded.',
-    goals:{met:[],partial:[],missed:[]},
-    ticketsInsight:'Analysis unavailable.', expensesInsight:'Analysis unavailable.', operationsInsight:'Analysis unavailable.',
-    sustainabilityNotes:{ heatPump:{status:'Partial',note:'Status pending.'}, hasirudala:{status:'Partial',note:'Status pending.'}, solar:{status:'Partial',note:'Status pending.'}, ecoSTP:{status:'Partial',note:'Status pending.'}, waterTreatment:{status:'Partial',note:'Status pending.'}, implementationIdeas:{status:'Partial',note:'Status pending.'} },
-    memo:{point1:'—',point2:'—',point3:'—',point4:'—',point5:'—'},
-  };
 
   if (!background) {
     btn.disabled=true; btn.textContent='Generating…';
@@ -879,55 +932,48 @@ async function generateReport(background=false) {
     setStep(1);
   }
 
-  let sheetData = null;
-  let insights  = {...FALLBACK_INS};
+  let rawSheets = null;
+  let combined  = { ...EMPTY_COMBINED };
 
+  // Step 1: fetch raw sheets data (no parsing, no period params)
   try {
-    const url = `/api/sheets?period=${encodeURIComponent(selectedPeriod)}&type=${selectedType}`;
-    const r   = await fetch(url);
-    sheetData = r.ok ? await r.json() : null;
+    const r = await fetch('/api/sheets');
+    rawSheets = r.ok ? await r.json() : null;
   } catch(e) { console.warn('Sheets fetch error:', e); }
-
-  if (!sheetData) {
-    sheetData = {
-      period:selectedPeriod, type:selectedType, periodLabel:selectedPeriod, periodDates:selectedPeriod,
-      months:[], fetchTime:new Date().toISOString(),
-      handover:{handedOver:[],occupied:[],totalHandedOver:0,totalOccupied:0,occupancyRate:0,benchmarkRate:60},
-      maintenance:{costPerSqft:[],avgCostPerSqft:0,goalLine:5,invoicesSent:[],totalInvoices:0},
-      tickets:{received:[],closed:[],totalReceived:0,totalClosed:0,resolutionRate:0,prevTotalReceived:0},
-      expenses:{total:0,perMonth:[],events:[],security:[],pest:[],lineItems:[]},
-      works:{eastBlock:{done:0,total:0,pct:0},southBlock:{done:0,total:0,pct:0},ideas:{done:0,total:0}},
-      sustainability:[], weekly:{complaints:{received:0,closed:0},scoring:{hk:0,security:0,mst:0,max:5},attendance:{hk:100,security:100,mst:100},eastBlock:{done:0,total:0},southBlock:{done:0,total:0}},
-      previous:{occupancyRate:0,totalOccupied:0,totalHandedOver:0,avgCostPerSqft:0,totalExpenses:0,totalReceived:0,resolutionRate:0},
-      narrative:'',
-    };
-  }
 
   if (!background) setStep(2);
 
-  // Check: no real data → show cover only with message
-  const hasRealData = (sheetData.tickets?.totalReceived||0)>0
-    || (sheetData.expenses?.total||0)>0
-    || (sheetData.handover?.totalHandedOver||0)>0;
-
-  if (!hasRealData) {
-    insights.coverSummary = 'No data recorded for this period yet.';
-  } else {
+  // Step 2: send to analyze — Haiku extracts values + generates insights
+  if (rawSheets && !rawSheets.error) {
     try {
-      const ar = await fetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({data:sheetData,period:selectedPeriod}) });
-      if (ar.ok) { const ai=await ar.json(); if (ai&&!ai._error&&!ai._parseError) insights=ai; }
+      const ar = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawSheets, period: selectedPeriod, type: selectedType }),
+      });
+      if (ar.ok) {
+        const ai = await ar.json();
+        if (ai && !ai._error && !ai._parseError) combined = ai;
+        else combined = { ...EMPTY_COMBINED, ...ai };
+      }
     } catch(e) { console.warn('Analyze error (non-fatal):', e); }
   }
 
-  if (!background) setStep(3);
-  saveCache(selectedPeriod, sheetData, insights);
+  // Inject period + type into combined (in case Haiku omitted them)
+  combined.period = selectedPeriod;
+  combined.type   = selectedType;
+  if (!combined.periodLabel) combined.periodLabel = selectedPeriod;
+  if (!combined.periodDates) combined.periodDates = selectedPeriod;
 
-  currentData     = sheetData;
-  currentInsights = insights;
-  visibleSlides   = buildVisible(sheetData);
+  if (!background) setStep(3);
+  saveCache(selectedPeriod, combined);
+
+  currentData     = combined;
+  currentInsights = combined;
+  visibleSlides   = buildVisible(combined);
   currentSlide    = 0;
 
-  renderAll(sheetData, insights);
+  renderAll(combined, combined);
   rebuildDots();
 
   if (!background) {
@@ -936,8 +982,7 @@ async function generateReport(background=false) {
     btn.disabled=false;
     btn.textContent='Generate →';
   } else {
-    // Background refresh — re-render silently and show toast
-    renderAll(sheetData, insights);
+    renderAll(combined, combined);
     rebuildDots();
     showSlide(currentSlide);
     showToast();
@@ -955,17 +1000,16 @@ document.addEventListener('DOMContentLoaded', () => {
   selectedPeriod = 'Q1 2026';
   selectedType   = 'quarter';
 
-  // Try to load from cache immediately
+  // Try to load from cache immediately, then refresh in background
   const cached = loadCache(selectedPeriod);
   if (cached) {
-    currentData     = cached.data;
-    currentInsights = cached.insights;
-    visibleSlides   = buildVisible(cached.data);
+    currentData     = cached;
+    currentInsights = cached;
+    visibleSlides   = buildVisible(cached);
     currentSlide    = 0;
-    renderAll(cached.data, cached.insights);
+    renderAll(cached, cached);
     rebuildDots();
     showSlide(0);
-    // Then refresh in background
     setTimeout(() => generateReport(true), 100);
   } else {
     generateReport(false);
