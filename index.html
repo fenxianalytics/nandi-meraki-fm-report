@@ -87,7 +87,7 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
 .cover-title{color:white;font-family:'DM Serif Display',serif;font-size:clamp(30px,5vw,68px);font-weight:400;line-height:1.02;margin-bottom:1.2vw;letter-spacing:-0.5px;}
 .cover-title em{color:rgba(255,180,160,0.75);font-style:italic;}
 .cover-subtitle{color:rgba(255,255,255,0.42);font-size:clamp(10px,1vw,14px);font-weight:300;letter-spacing:2px;margin-bottom:1.8vw;}
-.cover-summary{color:rgba(255,255,255,0.62);font-size:clamp(10px,0.88vw,13.5px);font-weight:300;line-height:1.7;max-width:400px;margin-bottom:2.5vw;}
+.cover-summary{color:rgba(255,255,255,0.62);font-size:clamp(8.5px,0.74vw,12px);font-weight:300;line-height:1.75;max-width:380px;margin-bottom:1.5vw;}
 .cover-meta{color:rgba(255,255,255,0.2);font-size:clamp(7px,0.6vw,9px);letter-spacing:1.8px;text-transform:uppercase;margin-top:auto;}
 .cover-kpi-strip{display:flex;gap:0;border:1px solid rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;align-self:flex-start;margin-top:2vw;}
 .ck{padding:10px 16px;border-right:1px solid rgba(255,255,255,0.08);min-width:80px;}
@@ -172,10 +172,51 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
 .goal-row-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
 .goal-name{font-size:clamp(8px,0.65vw,10.5px);font-weight:600;color:var(--text-dark);flex:1;}
 .goal-actual{font-size:clamp(8px,0.65vw,10.5px);font-weight:700;color:var(--text-mid);white-space:nowrap;}
-.goal-bar-bg{height:3px;background:var(--light-gray);border-radius:2px;overflow:hidden;}
-.goal-bar-fill{height:100%;border-radius:2px;transition:width 0.5s ease;}
-.goal-bar-fill.met{background:var(--green);}.goal-bar-fill.partial{background:var(--amber);}.goal-bar-fill.missed{background:var(--red);}
+.goal-bar-bg{height:8px;background:var(--light-gray);border-radius:4px;overflow:hidden;margin-top:1px;}
+.goal-bar-fill{height:100%;border-radius:4px;transition:width 0.6s ease;}
+.goal-bar-fill.met{background:#2d6a4f;}.goal-bar-fill.partial{background:#e07a00;}.goal-bar-fill.missed{background:#8b1a1a;}.goal-bar-fill.na{background:#aaa;}
 .goal-sub{font-size:clamp(7px,0.55vw,8.5px);color:var(--text-light);line-height:1.4;}
+.goal-context{font-size:clamp(7px,0.54vw,8.5px);color:var(--text-mid);line-height:1.45;font-style:italic;margin-top:1px;}
+.goals-trend-box{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:10px 13px;box-shadow:var(--card-shadow);flex-shrink:0;}
+.goals-trend-box p{font-size:clamp(7.5px,0.63vw,10px);color:var(--text-dark);line-height:1.7;}
+
+/* ── COVER NARRATIVE & HIGHLIGHTS ── */
+.cover-narrative{color:rgba(255,255,255,0.68);font-size:clamp(9px,0.82vw,12.5px);font-weight:300;line-height:1.75;max-width:420px;margin-top:1.2vw;}
+.cover-highlights-col{position:absolute;right:3%;top:50%;transform:translateY(-50%);z-index:2;width:30%;display:flex;flex-direction:column;gap:10px;}
+.cover-hl-card{padding:10px 14px;border-radius:5px;border-left:4px solid transparent;}
+.cover-hl-card.win{border-left-color:#2d6a4f;background:rgba(45,106,79,0.18);}
+.cover-hl-card.risk{border-left-color:#e07a00;background:rgba(224,122,0,0.14);}
+.cover-hl-card.action{border-left-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.06);}
+.cover-hl-label{font-size:clamp(7px,0.52vw,9px);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
+.cover-hl-card.win .cover-hl-label{color:#6fcf97;}
+.cover-hl-card.risk .cover-hl-label{color:#f2994a;}
+.cover-hl-card.action .cover-hl-label{color:rgba(255,255,255,0.5);}
+.cover-hl-text{font-size:clamp(8px,0.68vw,11px);line-height:1.5;color:rgba(255,255,255,0.78);}
+
+/* ── TICKET CALLOUT & ANALYSIS ── */
+.ticket-callout{padding:9px 13px;border-radius:4px;font-size:clamp(8px,0.66vw,10.5px);font-weight:600;line-height:1.5;flex-shrink:0;}
+.ticket-callout.above{background:rgba(10,107,111,0.07);border:1px solid rgba(10,107,111,0.22);color:var(--green);}
+.ticket-callout.below{background:rgba(198,40,40,0.06);border:1px solid rgba(198,40,40,0.22);color:var(--red);}
+.analysis-paras{display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
+.analysis-para{font-size:clamp(7.5px,0.62vw,10px);color:var(--text-dark);line-height:1.7;padding:6px 10px;border-radius:4px;background:rgba(122,26,20,0.02);border-left:2px solid rgba(122,26,20,0.15);}
+.analysis-para strong{color:var(--maroon);font-size:clamp(7px,0.55vw,9px);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:2px;}
+
+/* ── EXPENSE WHERE THE MONEY WENT ── */
+.exp-items-table{display:flex;flex-direction:column;gap:3px;flex:1;overflow:auto;}
+.exp-item-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:3px;}
+.exp-item-row:nth-child(even){background:rgba(0,0,0,0.025);}
+.exp-item-name{font-size:clamp(7.5px,0.62vw,10px);color:var(--text-dark);min-width:110px;font-weight:500;}
+.exp-item-bar-bg{flex:1;height:6px;background:var(--light-gray);border-radius:3px;overflow:hidden;}
+.exp-item-bar-fill{height:100%;border-radius:3px;background:var(--maroon);opacity:0.7;}
+.exp-item-amt{font-size:clamp(7.5px,0.6vw,9.5px);color:var(--maroon);font-weight:700;min-width:70px;text-align:right;font-variant-numeric:tabular-nums;}
+
+/* ── OPS SUMMARY ── */
+.ops-summary-box{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:10px 14px;box-shadow:var(--card-shadow);flex-shrink:0;}
+.ops-summary-box p{font-size:clamp(7.5px,0.64vw,10px);color:var(--text-dark);line-height:1.75;}
+.sustain-card-next{font-size:clamp(7px,0.54vw,8.5px);color:var(--text-light);font-style:italic;line-height:1.4;}
+
+/* ── SLIDE FOOTER ── */
+.slide-footer{font-size:clamp(6.5px,0.5vw,8px);color:var(--text-light);text-align:right;padding:3px 22px 5px;border-top:1px solid var(--mid-gray);flex-shrink:0;letter-spacing:0.3px;font-style:italic;}
 
 /* ── SLIDE 3: TICKETS ── */
 .spike-badge{display:inline-flex;align-items:center;gap:4px;background:var(--red-light);color:var(--red);font-size:clamp(7px,0.58vw,9px);font-weight:700;padding:3px 9px;border-radius:4px;margin-left:8px;}
@@ -228,9 +269,10 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
 <div id="loadingOverlay">
   <div class="loading-spinner"></div>
   <div class="loading-steps">
-    <div class="loading-step active" id="step1"><div class="step-dot"></div>Fetching sheets…</div>
-    <div class="loading-step inactive" id="step2"><div class="step-dot"></div>Analysing data…</div>
-    <div class="loading-step inactive" id="step3"><div class="step-dot"></div>Building report…</div>
+    <div class="loading-step active" id="step1"><div class="step-dot"></div>Connecting to Google Sheets…</div>
+    <div class="loading-step inactive" id="step2"><div class="step-dot"></div>Reading facility data…</div>
+    <div class="loading-step inactive" id="step3"><div class="step-dot"></div>Analysing with AI…</div>
+    <div class="loading-step inactive" id="step4"><div class="step-dot"></div>Building your report…</div>
   </div>
   <div style="color:rgba(255,255,255,0.18);font-size:9px;letter-spacing:3px;text-transform:uppercase;margin-top:8px;">Nandi Meraki · FM Report</div>
 </div>
@@ -286,6 +328,7 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
       <div class="scorecard-grid" id="scorecardGrid"></div>
       <div class="data-chips" id="dataChips"></div>
     </div>
+    <div class="slide-footer" id="s2footer"></div>
   </div>
 
   <!-- SLIDE 3: TICKETS & RESOLUTION -->
@@ -310,8 +353,10 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
           </div>
         </div>
       </div>
-      <div class="highlight-box" id="s3insight"></div>
+      <div id="s3callout"></div>
+      <div class="analysis-paras" id="s3analysis"></div>
     </div>
+    <div class="slide-footer" id="s3footer"></div>
   </div>
 
   <!-- SLIDE 4: EXPENSES -->
@@ -327,8 +372,9 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
         <span style="color:var(--text-light);font-size:clamp(8px,0.65vw,10.5px);margin-left:4px;" id="s4period"></span>
       </div>
       <div class="slide-body-row" id="s4body"></div>
-      <div class="highlight-box" id="s4insight"></div>
+      <div class="analysis-paras" id="s4analysis"></div>
     </div>
+    <div class="slide-footer" id="s4footer"></div>
   </div>
 
   <!-- SLIDE 5: OPERATIONS & INTELLIGENCE -->
@@ -338,6 +384,7 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
       <span class="slide-header-tag" id="s5tag"></span>
     </div>
     <div class="slide-body">
+      <div class="ops-summary-box" id="opsSummary"></div>
       <div class="sustain-grid" id="sustainGrid"></div>
       <div id="staffPanel" style="display:none;" class="staff-panel"></div>
       <div class="memo-section">
@@ -348,6 +395,7 @@ body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-g
         <div class="memo-cols" id="memoCols"></div>
       </div>
     </div>
+    <div class="slide-footer" id="s5footer"></div>
   </div>
 
 </div>
@@ -370,7 +418,7 @@ const CACHE_KEY = 'nm_fm_v4';
 
 const QUARTER_PILLS = [
   { label:'Q3 2025 (Oct–Dec)', period:'Q3 2025',  type:'quarter' },
-  { label:'Q4 2025 (Jan–Feb)', period:'Q4 2025',  type:'quarter' },
+  { label:'Q4 2025 (Jan–Mar)', period:'Q4 2025',  type:'quarter' },
   { label:'Q1 2026 (Apr)',     period:'Q1 2026',  type:'quarter' },
   { label:'All Time (Oct–Apr)',period:'All Time', type:'quarter' },
 ];
@@ -438,9 +486,9 @@ function selectPill(btn, period, type) {
 
 // ── LOADING OVERLAY ───────────────────────────────────────────────────────────
 function setStep(n) {
-  [1,2,3].forEach(i => {
+  [1,2,3,4].forEach(i => {
     const el = document.getElementById('step'+i);
-    el.className = 'loading-step ' + (i<n?'done':i===n?'active':'inactive');
+    if (el) el.className = 'loading-step ' + (i<n?'done':i===n?'active':'inactive');
   });
 }
 
@@ -458,6 +506,28 @@ function hideLoading() {
 const CC = { maroon:'#7a1a14', maroon2:'#9e2219', green:'#0a6b6f', amber:'#b8692e', blue:'#2e5d93', red:'#c62828', mFill:'rgba(122,26,20,0.1)', gFill:'rgba(10,107,111,0.1)' };
 Chart.defaults.font.family = "'Inter',sans-serif";
 Chart.defaults.color = '#9c7d78';
+
+// Inline plugin: show values at end of horizontal bars
+const hBarLabelPlugin = {
+  id: 'hBarLabels',
+  afterDatasetsDraw(chart) {
+    if (chart.config.type !== 'bar' || chart.config.options?.indexAxis !== 'y') return;
+    const ctx = chart.ctx;
+    ctx.save();
+    chart.data.datasets.forEach((ds, di) => {
+      chart.getDatasetMeta(di).data.forEach((bar, idx) => {
+        const val = ds.data[idx];
+        if (!val) return;
+        ctx.fillStyle = '#6b4f4a';
+        ctx.font = '600 8px Inter';
+        ctx.textAlign = 'left';
+        ctx.fillText(val, bar.x + 4, bar.y + 3);
+      });
+    });
+    ctx.restore();
+  },
+};
+Chart.register(hBarLabelPlugin);
 
 function destroyChart(id) { try{charts[id]?.destroy();}catch(e){} delete charts[id]; }
 
@@ -530,7 +600,10 @@ function renderSlide1(d, ins) {
   document.getElementById('coverWatermark').textContent = wm;
   document.getElementById('coverPeriodItalic').textContent = d.periodLabel || p;
   document.getElementById('coverDates').textContent = d.periodDates || '';
-  document.getElementById('coverSummary').textContent = safeS(ins.coverSummary, 'FM performance data loaded.');
+
+  // Use periodNarrative for the summary block (4-5 sentences)
+  const narrative = safeS(ins.periodNarrative, safeS(ins.coverSummary, 'FM performance data loaded.'));
+  document.getElementById('coverSummary').textContent = narrative;
 
   const now = new Date();
   const ft  = d.fetchTime ? new Date(d.fetchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
@@ -559,17 +632,32 @@ function renderSlide1(d, ins) {
     ${exp>0?`<div class="ck"><div class="ck-val" style="font-size:clamp(11px,1.2vw,17px);">${fmtR(exp)}</div><div class="ck-label">Total Spend</div>${prevExp?deltaSmall(exp,prevExp,false):''}</div>`:''}
   `;
   document.getElementById('coverKpiStrip').innerHTML = chips;
+
+  // Highlight cards — remove old one, inject fresh
+  document.querySelector('.cover-highlights-col')?.remove();
+  const hl = ins.highlights || {};
+  const hlWin    = safeS(hl.win,    '—');
+  const hlRisk   = safeS(hl.risk,   '—');
+  const hlAction = safeS(hl.action, '—');
+  const hlEl = document.createElement('div');
+  hlEl.className = 'cover-highlights-col';
+  hlEl.innerHTML = `
+    <div class="cover-hl-card win"><div class="cover-hl-label">✓ Win</div><div class="cover-hl-text">${hlWin}</div></div>
+    <div class="cover-hl-card risk"><div class="cover-hl-label">⚠ Risk</div><div class="cover-hl-text">${hlRisk}</div></div>
+    <div class="cover-hl-card action"><div class="cover-hl-label">→ Action</div><div class="cover-hl-text">${hlAction}</div></div>
+  `;
+  document.getElementById('slide-1').appendChild(hlEl);
 }
 
 function renderSlide2(d, ins) {
+  const ft = d.fetchTime ? new Date(d.fetchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
   document.getElementById('s2tag').textContent = d.periodLabel || selectedPeriod;
-  const goals = Array.isArray(ins.goals) ? ins.goals : [];
+  document.getElementById('s2footer').textContent = 'Data from Google Sheets · Last fetched ' + ft;
 
-  // Count by status
+  const goals = Array.isArray(ins.goals) ? ins.goals : [];
   const counts = { MET:0, PARTIAL:0, MISSED:0, NA:0 };
   goals.forEach(g => { const s = g.status || 'NA'; counts[s] = (counts[s]||0) + 1; });
 
-  // Sort MET → PARTIAL → MISSED → NA
   const ORDER = { MET:0, PARTIAL:1, MISSED:2, NA:3 };
   const sorted = [...goals].sort((a,b) => (ORDER[a.status]??3) - (ORDER[b.status]??3));
 
@@ -585,21 +673,28 @@ function renderSlide2(d, ins) {
     </div>`;
 
   const list = sorted.length ? sorted.map(g => {
-    const cls  = CLS[g.status] || '';
-    const bc   = BADGE[g.status] || 'delta-neu';
-    const pct  = Math.max(0, Math.min(100, g.progressPct || 0));
+    const cls     = CLS[g.status] || 'na';
+    const bc      = BADGE[g.status] || 'delta-neu';
+    const barPct  = Math.max(0, Math.min(100, g.progressPct || 0));
+    const barCls  = cls || 'na';
+    const ctx     = g.context ? `<div class="goal-context">${g.context}</div>` : '';
     return `<div class="goal-row ${cls}">
       <div class="goal-row-top">
         <span class="goal-name">${g.name||''}</span>
         <span class="goal-actual">${g.actual||''}</span>
         <span class="badge ${bc}">${g.status||'NA'}</span>
       </div>
-      <div class="goal-bar-bg"><div class="goal-bar-fill ${cls}" style="width:${pct}%"></div></div>
+      <div class="goal-bar-bg"><div class="goal-bar-fill ${barCls}" style="width:${barPct}%"></div></div>
       <div class="goal-sub">${g.target||''} · ${g.benchmark||''}</div>
+      ${ctx}
     </div>`;
   }).join('') : '<div class="scorecard-empty" style="padding:12px;">No goals data for this period.</div>';
 
-  document.getElementById('scorecardGrid').innerHTML = strip + `<div class="goals-list">${list}</div>`;
+  // Goals trend summary
+  const trend = safeS(ins.goalsTrend, '');
+  const trendHtml = trend ? `<div class="goals-trend-box"><p>${trend}</p></div>` : '';
+
+  document.getElementById('scorecardGrid').innerHTML = strip + `<div class="goals-list">${list}</div>` + trendHtml;
 
   // Data chips
   const east  = d.works?.eastBlock  || {};
@@ -646,7 +741,10 @@ function renderSlide2(d, ins) {
 }
 
 function renderSlide3(d, ins) {
+  const ft = d.fetchTime ? new Date(d.fetchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
   document.getElementById('s3tag').textContent = d.periodLabel || selectedPeriod;
+  document.getElementById('s3footer').textContent = 'Data from Google Sheets · Last fetched ' + ft;
+
   const rcvd   = d.tickets?.received  || [];
   const clsd   = d.tickets?.closed    || [];
   const months = d.months             || [];
@@ -655,10 +753,9 @@ function renderSlide3(d, ins) {
   const rr     = safe(d.tickets?.resolutionRate);
   const prevR  = safe(d.tickets?.prevTotalReceived);
   const rrColor = rr>=85?'green':rr>=70?'amber':'red';
-
-  // Spike detection (>50% increase vs previous)
-  const spike = prevR>0 && totR>0 && (totR-prevR)/prevR > 0.5;
-  const spikePct = prevR>0 ? Math.round((totR-prevR)/prevR*100) : 0;
+  const spike   = prevR>0 && totR>0 && (totR-prevR)/prevR > 0.5;
+  const spikePct= prevR>0 ? Math.round((totR-prevR)/prevR*100) : 0;
+  const outstanding = totR > totC ? (totR - totC) : 0;
 
   document.getElementById('s3kpis').innerHTML = `
     <div class="kpi-card amber">
@@ -670,7 +767,7 @@ function renderSlide3(d, ins) {
     <div class="kpi-card green">
       <div class="kpi-label">Total Closed</div>
       <div class="kpi-val" style="font-size:clamp(18px,2vw,30px);">${fmt(totC)}</div>
-      <div class="kpi-sub">${totR>totC?(totR-totC)+' outstanding':'All resolved'}</div>
+      <div class="kpi-sub">${outstanding>0?outstanding+' outstanding':'All resolved'}</div>
     </div>
     <div class="kpi-card ${rrColor}">
       <div class="kpi-label">Resolution Rate</div>
@@ -686,44 +783,92 @@ function renderSlide3(d, ins) {
       { label:'Closed',   data:clsd, backgroundColor:CC.green },
     ]);
   } else {
-    document.getElementById('s3chartTitle').textContent = 'Tickets — '+months[0];
+    document.getElementById('s3chartTitle').textContent = 'Tickets — '+(months[0]||'');
     barChart('ticketChart', ['Received','Closed'], [
       { label:'Count', data:[totR,totC], backgroundColor:[CC.maroon,CC.green] },
     ]);
   }
 
-  // Category breakdown — parsed from ticket row if available
-  // For now show a placeholder horizontal bar with categories from the spec
-  // (real cat data will come if sheet parsing finds them)
-  const catData = (d.tickets?.categories||[]).slice(0,6);
-  if (catData.length>0) {
-    hBarChart('ticketCatChart', catData.map(c=>({label:c.name,value:c.count})));
+  // Category breakdown — top 8, with Jan-specific note
+  const catNote = d.tickets?.categoriesNote || '';
+  const isJanOnly = selectedPeriod === 'Jan' || (months.length===1 && months[0]==='Jan');
+  const rawCats  = (d.tickets?.categories || []).filter(c => c.count > 0);
+  const top8Cats = rawCats.sort((a,b)=>b.count-a.count).slice(0,8);
+
+  if (isJanOnly || rawCats.length === 0) {
+    const msg = isJanOnly ? 'Category breakdown not recorded for January' : (catNote || 'Category data not available for this period');
+    const wrap = document.getElementById('ticketCatChart');
+    if (wrap) wrap.innerHTML = `<div class="no-data-msg" style="font-style:italic;text-align:center;padding:12px;">${msg}</div>`;
   } else {
-    clearChart('ticketCatChart');
+    hBarChart('ticketCatChart', top8Cats.map(c=>({label:c.name,value:c.count})));
   }
 
-  document.getElementById('s3insight').innerHTML = `<strong>Analysis:</strong> ${safeS(ins.ticketsInsight,'Analysis unavailable.')}`;
+  // Resolution callout
+  const calloutEl = document.getElementById('s3callout');
+  if (rr >= 85) {
+    calloutEl.innerHTML = `<div class="ticket-callout above">✓ ON TRACK — Above 85% benchmark. Maintain current resolution velocity.</div>`;
+  } else if (totR > 0) {
+    const nextMonthMap = { Oct:'Nov', Nov:'Dec', Dec:'Jan', Jan:'Feb', Feb:'Mar', Apr:'May', Q3:'end of Q4', Q4:'end of Q1', 'Q1':'end of Q2', 'All Time':'next quarter' };
+    const nextM = nextMonthMap[selectedPeriod] || 'next month';
+    calloutEl.innerHTML = `<div class="ticket-callout below">⚠ BELOW BENCHMARK — ${outstanding} tickets outstanding. Resolution must reach 85% by ${nextM}.</div>`;
+  } else {
+    calloutEl.innerHTML = '';
+  }
+
+  // 4 analysis paragraphs
+  const ta = ins.ticketAnalysis || {};
+  const analysisEl = document.getElementById('s3analysis');
+  analysisEl.innerHTML = [
+    ['Volume & Resolution', ta.volumeResolution],
+    ['Top Issues', ta.topIssues],
+    ['Pattern', ta.pattern],
+    ['Action', ta.action],
+  ].filter(([,v]) => v && v !== 'Analysis unavailable.').map(([label, text]) =>
+    `<div class="analysis-para"><strong>${label}</strong>${text}</div>`
+  ).join('') || `<div class="analysis-para"><strong>Analysis</strong>${safeS(ins.ticketsInsight,'Analysis unavailable.')}</div>`;
 }
 
 function renderSlide4(d, ins) {
+  const ft = d.fetchTime ? new Date(d.fetchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
   document.getElementById('s4tag').textContent = d.periodLabel || selectedPeriod;
+  document.getElementById('s4footer').textContent = 'Data from Google Sheets · Last fetched ' + ft;
+
   const total     = safe(d.expenses?.total);
   const prevTotal = safe(d.previous?.totalExpenses);
   const months    = d.months || [];
+  const expMonths = d.expenses?.perMonth?.length > 0 ? (d.expenses.perMonth.length > months.length ? d.expenses.perMonth : months) : months;
   const perMonth  = d.expenses?.perMonth  || [];
   const events    = d.expenses?.events    || [];
   const security  = d.expenses?.security  || [];
   const pest      = d.expenses?.pest      || [];
-  const lineItems = d.expenses?.lineItems || [];
+  const lineItems = (d.expenses?.lineItems || []).filter(li => li.total > 0).sort((a,b) => b.total - a.total);
 
   document.getElementById('s4total').textContent = total > 0 ? fmtR(total) : '—';
   document.getElementById('s4period').textContent = d.periodLabel || '';
   document.getElementById('s4delta').innerHTML = prevTotal>0 ? deltaHtml(total,prevTotal,'%',false) : '';
 
   const body = document.getElementById('s4body');
+  const maxLineAmt = lineItems[0]?.total || 1;
+
+  // "WHERE THE MONEY WENT" — proportional bar table (all items)
+  const lineItemsHtml = lineItems.length > 0 ? `
+    <div class="col-right" style="min-width:200px;">
+      <div class="section-title">Where the Money Went</div>
+      <div class="chart-wrap" style="flex:1;padding:10px 12px;">
+        <div class="exp-items-table">
+          ${lineItems.map(item => {
+            const barW = Math.round(item.total / maxLineAmt * 100);
+            return `<div class="exp-item-row">
+              <span class="exp-item-name">${item.name}</span>
+              <div class="exp-item-bar-bg"><div class="exp-item-bar-fill" style="width:${barW}%"></div></div>
+              <span class="exp-item-amt">${fmtR(item.total)}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>` : '';
 
   if (selectedType==='month') {
-    // Monthly: donut + line items
     body.innerHTML = `
       <div class="col-left">
         <div class="section-title">Spend Breakdown</div>
@@ -731,26 +876,16 @@ function renderSlide4(d, ins) {
           <div class="chart-canvas-wrap" id="expDonut"><div class="no-data-msg">No data</div></div>
         </div>
       </div>
-      <div class="col-right">
-        <div class="section-title">Top Line Items</div>
-        <div class="chart-wrap" style="flex:1;padding:12px 14px;">
-          <div class="line-items-list" id="lineItemsList"></div>
-        </div>
-      </div>`;
+      ${lineItemsHtml}`;
     setTimeout(() => {
-      const evtTotal = events.reduce((a,b)=>a+b,0);
-      const secTotal = security.reduce((a,b)=>a+b,0);
-      const pestTotal= pest.reduce((a,b)=>a+b,0);
+      const evtTotal  = events.reduce((a,b)=>a+b,0);
+      const secTotal  = security.reduce((a,b)=>a+b,0);
+      const pestTotal = pest.reduce((a,b)=>a+b,0);
       donutChart('expDonut', ['Events','Security','Pest'], [evtTotal,secTotal,pestTotal], [CC.amber,CC.maroon,CC.green]);
-      const list = document.getElementById('lineItemsList');
-      if (list) {
-        list.innerHTML = lineItems.slice(0,8).map(item=>
-          `<div class="line-item"><span class="line-item-name">${item.name}</span><span class="line-item-amt">${fmtR(item.total)}</span></div>`
-        ).join('');
-      }
     }, 50);
   } else {
-    // Quarterly: stacked bar + trend line
+    // Use expense month labels if available (may differ from FM months for Q4 which includes Mar)
+    const expLabels = months.length > 0 ? months : ['Period'];
     body.innerHTML = `
       <div class="col-left">
         <div class="section-title">Monthly Totals with Trend</div>
@@ -758,33 +893,46 @@ function renderSlide4(d, ins) {
           <div class="chart-canvas-wrap" id="expBar"><div class="no-data-msg">No data</div></div>
         </div>
       </div>
-      <div class="col-right">
-        <div class="section-title">Events / Security / Pest</div>
-        <div class="chart-wrap" style="flex:1;">
-          <div class="chart-canvas-wrap" id="expStack"><div class="no-data-msg">No data</div></div>
-        </div>
-      </div>`;
+      ${lineItemsHtml}`;
     setTimeout(() => {
-      barChart('expBar', months, [
+      // For Q4 which has 3 expense months (Jan/Feb/Mar) but 2 FM months, use perMonth length for labels
+      const barLabels = perMonth.length > expLabels.length
+        ? [...expLabels, 'Mar']
+        : expLabels;
+      barChart('expBar', barLabels, [
         { label:'Total Spend', data:perMonth, backgroundColor:CC.maroon+'99' },
       ], { yFmt: v=>'₹'+fmt(v) });
-      // Overlay trend line
       lineOverlay('expBar', 'Trend', perMonth, CC.maroon);
-
-      barChart('expStack', months, [
-        { label:'Events',   data:events,   backgroundColor:CC.amber, stack:'s' },
-        { label:'Security', data:security, backgroundColor:CC.maroon, stack:'s' },
-        { label:'Pest',     data:pest,     backgroundColor:CC.green, stack:'s' },
-      ], { stacked:true, yFmt: v=>'₹'+fmt(v) });
     }, 50);
   }
 
-  document.getElementById('s4insight').innerHTML = `<strong>Analysis:</strong> ${safeS(ins.expensesInsight,'Analysis unavailable.')}`;
+  // Expense analysis paragraphs
+  const ea = ins.expenseAnalysis || {};
+  const analysisEl = document.getElementById('s4analysis');
+  analysisEl.innerHTML = [
+    ['Total & Split', ea.totalSplit],
+    ['Variable Drivers', ea.variableDrivers],
+    ['Trend & Watch', ea.trendWatch],
+  ].filter(([,v]) => v && v !== 'Analysis unavailable.').map(([label, text]) =>
+    `<div class="analysis-para"><strong>${label}</strong>${text}</div>`
+  ).join('') || `<div class="analysis-para"><strong>Analysis</strong>${safeS(ins.expensesInsight,'Analysis unavailable.')}</div>`;
 }
 
 function renderSlide5(d, ins) {
+  const ft = d.fetchTime ? new Date(d.fetchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
   document.getElementById('s5tag').textContent = d.periodLabel || selectedPeriod;
+  document.getElementById('s5footer').textContent = 'Data from Google Sheets · Last fetched ' + ft;
   document.getElementById('memoMeta').textContent = (d.periodLabel||selectedPeriod) + ' · ' + new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+
+  // Operations summary
+  const opsSummary = safeS(ins.operationsSummary, '');
+  const opsSummaryEl = document.getElementById('opsSummary');
+  if (opsSummary && opsSummary !== 'Analysis unavailable.') {
+    opsSummaryEl.style.display = '';
+    opsSummaryEl.innerHTML = `<p>${opsSummary}</p>`;
+  } else {
+    opsSummaryEl.style.display = 'none';
+  }
 
   // Sustainability cards
   const SKEYS = ['heatPump','hasirudala','solar','ecoSTP','waterTreatment','implementationIdeas'];
@@ -795,13 +943,15 @@ function renderSlide5(d, ins) {
   document.getElementById('sustainGrid').innerHTML = SKEYS.map(k => {
     const fromIns  = sNotes[k] || {};
     const fromData = sData.find(s=>s.key===k) || {};
-    const status = fromIns.status || fromData.status || 'Pending';
-    const note   = fromIns.note   || fromData.rawValue || 'Status unavailable.';
+    const status     = fromIns.status     || fromData.status   || 'Pending';
+    const note       = fromIns.note       || fromData.rawValue || 'Status unavailable.';
+    const nextAction = fromIns.nextAction || '';
     const bc = status==='Operational'?'badge-green':status==='Partial'?'badge-amber':'badge-red';
     return `<div class="sustain-card">
       <div class="sustain-card-name">${SLABELS[k]||k}</div>
       <span class="badge ${bc}">${status}</span>
       <div class="sustain-card-note">${note}</div>
+      ${nextAction?`<div class="sustain-card-next">${nextAction}</div>`:''}
     </div>`;
   }).join('');
 
@@ -908,18 +1058,31 @@ const EMPTY_COMBINED = {
   period:'', type:'', periodLabel:'', periodDates:'', months:[], fetchTime:'',
   handover:    { handedOver:[], occupied:[], totalHandedOver:0, totalOccupied:0, occupancyRate:0, benchmarkRate:60 },
   maintenance: { costPerSqft:[], avgCostPerSqft:0, goalLine:5, invoicesSent:[], totalInvoices:0 },
-  tickets:     { received:[], closed:[], totalReceived:0, totalClosed:0, resolutionRate:0, prevTotalReceived:0 },
+  tickets:     { received:[], closed:[], totalReceived:0, totalClosed:0, resolutionRate:0, prevTotalReceived:0, categories:[], categoriesNote:'' },
   expenses:    { total:0, perMonth:[], events:[], security:[], pest:[], lineItems:[] },
   works:       { eastBlock:{done:0,total:0,pct:0}, southBlock:{done:0,total:0,pct:0}, ideas:{done:0,total:0} },
   sustainability: [],
   previous:    { occupancyRate:0, totalOccupied:0, totalHandedOver:0, avgCostPerSqft:0, totalExpenses:0, totalReceived:0, resolutionRate:0 },
   healthScore: 0, healthScoreTrend: '—',
+  periodNarrative: 'FM data loaded.',
+  highlights: { win:'Report loaded.', risk:'Regenerate for AI insights.', action:'Click Generate to refresh.' },
   coverSummary: 'FM data loaded.',
   goals: [],
+  goalsTrend: 'Analysis unavailable.',
+  ticketAnalysis: { volumeResolution:'Analysis unavailable.', topIssues:'Analysis unavailable.', pattern:'Analysis unavailable.', action:'Analysis unavailable.' },
   ticketsInsight: 'Analysis unavailable.',
+  expenseAnalysis: { totalSplit:'Security fixed at ~₹1.11L/month; analysis unavailable.', variableDrivers:'Analysis unavailable.', trendWatch:'Analysis unavailable.' },
   expensesInsight: 'Security fixed at ~₹1.11L/month; analysis unavailable.',
+  operationsSummary: 'Analysis unavailable.',
   operationsInsight: 'Analysis unavailable.',
-  sustainabilityNotes: { heatPump:{status:'Partial',note:'Status pending.'}, hasirudala:{status:'Partial',note:'Status pending.'}, solar:{status:'Partial',note:'Status pending.'}, ecoSTP:{status:'Partial',note:'Status pending.'}, waterTreatment:{status:'Partial',note:'Status pending.'}, implementationIdeas:{status:'Partial',note:'Status pending.'} },
+  sustainabilityNotes: {
+    heatPump:            {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
+    hasirudala:          {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
+    solar:               {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
+    ecoSTP:              {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
+    waterTreatment:      {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
+    implementationIdeas: {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
+  },
   memo: { point1:'—', point2:'—', point3:'—', point4:'—', point5:'—' },
 };
 
@@ -935,7 +1098,7 @@ async function generateReport(background=false) {
   let rawSheets = null;
   let combined  = { ...EMPTY_COMBINED };
 
-  // Step 1: fetch raw sheets data (no parsing, no period params)
+  // Step 1: connect and fetch raw sheets
   try {
     const r = await fetch('/api/sheets');
     rawSheets = r.ok ? await r.json() : null;
@@ -943,7 +1106,10 @@ async function generateReport(background=false) {
 
   if (!background) setStep(2);
 
-  // Step 2: send to analyze — Haiku extracts values + generates insights
+  // Step 2: read facility data (already fetched)
+  if (!background) setStep(3);
+
+  // Step 3: analyse with AI
   if (rawSheets && !rawSheets.error) {
     try {
       const ar = await fetch('/api/analyze', {
@@ -965,7 +1131,7 @@ async function generateReport(background=false) {
   if (!combined.periodLabel) combined.periodLabel = selectedPeriod;
   if (!combined.periodDates) combined.periodDates = selectedPeriod;
 
-  if (!background) setStep(3);
+  if (!background) setStep(4);
   saveCache(selectedPeriod, combined);
 
   currentData     = combined;
