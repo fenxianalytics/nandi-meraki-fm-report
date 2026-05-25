@@ -323,20 +323,34 @@ export default async function handler(req, res) {
 
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4500,
+      max_tokens: 8000,
       system: SYSTEM,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const raw  = (msg.content[0]?.text || '').trim();
-    const json = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const raw = (msg.content[0]?.text || '').trim();
 
+    let json = raw
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+
+    // If JSON is truncated, try to close it
     let result;
     try {
       result = JSON.parse(json);
     } catch {
-      console.error('JSON parse failed:', raw.slice(0, 400));
-      return res.status(200).json({ ...FALLBACK, periodLabel, periodDates, _parseError: true });
+      // Try closing unclosed JSON
+      try {
+        const closed = json + '"}}}';
+        result = JSON.parse(closed);
+      } catch {
+        console.error('JSON parse failed. Raw start:', raw.slice(0, 500));
+        return res.status(200).json({
+          ...FALLBACK, periodLabel, periodDates,
+          _parseError: true,
+        });
+      }
     }
 
     return res.status(200).json({
