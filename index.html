@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Fenxi Analytics — Reports</title>
+<title>Nandi Housing — Reports</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -191,7 +191,7 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none}
 <body>
 
 <nav class="nav" id="nav">
-  <div class="nav-brand" onclick="goHome()">Fenxi Analytics</div>
+  <div class="nav-brand" onclick="goHome()">Nandi Housing</div>
   <div class="nav-crumb" id="navCrumb"></div>
   <div id="navActions" style="display:flex;gap:8px;flex-shrink:0"></div>
 </nav>
@@ -1053,8 +1053,10 @@ function updateNav(){
 
 // ===== PERIOD BAR =====
 function selectMode(mode){S.mode=mode;S.period=null;S.periodMonths=[];renderPeriodBar();}
-function selectPeriod(pid,months){
-  S.period=pid;S.periodMonths=months;
+function selectPeriod(pid){
+  const all=[...PERIODS.quarter,...PERIODS.month,...PERIODS.year];
+  const p=all.find(x=>x.id===pid);
+  S.period=pid;S.periodMonths=p?.months||[];
   renderPeriodBar();updateNav();
 }
 
@@ -1066,7 +1068,7 @@ function renderPeriodBar(){
   const pillsH=pills.map(p=>{
     const active=S.period===p.id;
     const cached=loadCache(S.dept,p.id);
-    return `<button class="period-pill ${active?'active':''}" onclick="selectPeriod('${p.id}',${JSON.stringify(p.months)})">${p.label}${p.sub?`<span class="pill-sub">${p.sub}</span>`:''}${cached&&!active?'<span style="font-size:9px;opacity:.55"> cached</span>':''}</button>`;
+    return `<button class="period-pill ${active?'active':''}" onclick="selectPeriod('${p.id}')">${p.label}${p.sub?`<span class="pill-sub">${p.sub}</span>`:''}${cached&&!active?'<span style="font-size:9px;opacity:.55"> cached</span>':''}</button>`;
   }).join('');
   const hasCached=S.period&&loadCache(S.dept,S.period);
   document.getElementById('periodBar').innerHTML=`
@@ -1106,7 +1108,7 @@ function renderHome(){
   document.getElementById('homeView').innerHTML=`
     <div class="home-view">
       <div class="home-hero">
-        <h1>Fenxi Analytics</h1>
+        <h1>Nandi Housing</h1>
         <p>Select a department to view the monthly or quarterly report</p>
       </div>
       <div class="dept-grid">
