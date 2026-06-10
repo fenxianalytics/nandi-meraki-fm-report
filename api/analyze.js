@@ -2,308 +2,384 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const client = new Anthropic();
 
-const SYSTEM = `You are an FM analyst for Nandi Meraki, a premium 203-unit residential community in Bangalore (111 East Block + 92 South Block). Extract data and generate insights from raw sheet text.
+// ---------- FM ----------
 
-Indian FM benchmarks: maintenance cost ₹4–6/sqft (target ₹5), ticket resolution ≥85%, occupancy ≥60% within 6 months of handover. Security is a fixed ~₹1,11,000/month — flag variable spend drivers.
+const FM_SYSTEM = `You are an FM analyst for Nandi Meraki, a 203-unit residential community in Bangalore (East Block: 111 units, South Block: 92 units). Extract structured data from raw Google Sheet text.
 
-CRITICAL — NULL HANDLING: Only return null for a field if the source cell is completely empty. If any text exists in a cell, extract the best value possible. When data is genuinely missing, explain why specifically in the context field — never say just "no data". Examples: "Category breakdown not recorded for Jan" or "South Block tracking began Dec 2025".
+Rules:
+- For handover/works (cumulative): use the LAST month's value in the period.
+- For complaints/billing: sum all period months.
+- Expenses tab has a CUMULATIVE row — use the individual month rows for period totals.
+- "color" field for sustainability: "green" = operational, "amber" = in progress / partial, "red" = failed / not started.
+- Numbers only in numeric fields (no ₹ or commas).
+- Return ONLY valid raw JSON. No markdown, no backticks, no text before or after.`;
 
-OCCUPANCY RULE: Quarterly occupancy = end of period month only. Q3=Dec(44/107=41%), Q4=Feb(75/128=59%), Q1=Apr(91/148=61%). Use the LAST month of the period for totalOccupied, totalHandedOver, occupancyRate. Never use first month of quarter.
+function buildFMPrompt(rawSheets, period, periodMonths) {
+  const tabs = rawSheets.tabs || {};
+  const tabsText = Object.entries(tabs).map(([name, text]) =>
+    `=== ${name.toUpperCase()} TAB ===\n${text}`
+  ).join('\n\n');
 
-INVOICE COVERAGE RULE: Invoice coverage = invoices sent / OCCUPIED units (not handed-over). Apr: 105/91=115% → MET. Q3: 80/44=181% → MET. Always divide by occupied.
+  return `Analyse FM data for Nandi Meraki. Period: "${period}" — focus on months: [${periodMonths.join(', ')}]
 
-Return ONLY a valid raw JSON object. No markdown, no backticks, no text before or after.`;
+${tabsText}
 
-const COL = { Oct:2, Nov:3, Dec:4, Jan:6, Feb:7, Apr:9 };
-const ALL_FM_MONTHS = ['Oct','Nov','Dec','Jan','Feb','Apr'];
+EXTRACTION GUIDE:
+- Handover tab: each row = one month. Find rows for the period months. eastBlock.received = East Block Apts Received (cumulative, use last month). southBlock.received = South Block Apts Received (cumulative). eastWorksComplete/Total from East Works Completed col. southWorksComplete/Total from South Works Completed col.
+- Complaints tab: received, closed, open, closeRate% per month. Sum period months for totals. Extract category counts from category columns.
+- Billing tab: costPerSqft from Cost/Sqft col. East/South invoiced counts. Use last period month for costPerSqft.
+- Sustainability tab: status text for each of the 6 systems (Heat Pump, Solar, Eco STP, Water Meters/Aegir, OWC, Hasiru Dala). Count systems that are "Operational" or "Active" for systemsActive.
+- Expenses tab: Col B=Events, C=Security, D=Pest, E=Total per month. Row 13 or labeled "CUMULATIVE" has cumulative totals. Sum period months for total.
+- Staffing tab: scores (/5), attendance %, horticulture executive status, roster changes.
+- Ideas tab: count rows by Status column (Completed/Done vs In Progress vs Pending).
 
-const PERIOD_MONTHS = {
-  'Q3 2025': ['Oct','Nov','Dec'],
-  'Q4 2025': ['Jan','Feb'],
-  'Q1 2026': ['Apr'],
-  'All Time': ['Oct','Nov','Dec','Jan','Feb','Apr'],
-  Oct:['Oct'], Nov:['Nov'], Dec:['Dec'], Jan:['Jan'], Feb:['Feb'], Apr:['Apr'],
-};
-
-const PERIOD_LABEL = {
-  'Q3 2025': 'Q3 2025 (Oct–Dec)', 'Q4 2025': 'Q4 2025 (Jan–Mar)',
-  'Q1 2026': 'Q1 2026 (Apr)',      'All Time': 'All Time (Oct–Apr)',
-  Oct:'October 2025', Nov:'November 2025', Dec:'December 2025',
-  Jan:'January 2026', Feb:'February 2026', Apr:'April 2026',
-};
-
-const PERIOD_DATES = {
-  'Q3 2025': 'October – December 2025', 'Q4 2025': 'January – March 2026',
-  'Q1 2026': 'April 2026',              'All Time': 'October 2025 – April 2026',
-  Oct:'October 2025', Nov:'November 2025', Dec:'December 2025',
-  Jan:'January 2026', Feb:'February 2026', Apr:'April 2026',
-};
-
-const PERIOD_EXP_MONTHS = {
-  'Q3 2025': ['Oct-25','Nov-25','Dec-25'],
-  'Q4 2025': ['Jan-26','Feb-26','Mar-26'],
-  'Q1 2026': ['Apr-26'],
-  'All Time': ['Oct-25','Nov-25','Dec-25','Jan-26','Feb-26','Mar-26','Apr-26'],
-  Oct:['Oct-25'], Nov:['Nov-25'], Dec:['Dec-25'],
-  Jan:['Jan-26'], Feb:['Feb-26'], Apr:['Apr-26'],
-};
-
-const PREV_FM_MONTHS = {
-  'Q4 2025': ['Oct','Nov','Dec'],
-  'Q1 2026': ['Jan','Feb'],
-  Nov:['Oct'], Dec:['Nov'], Jan:['Dec'], Feb:['Jan'], Apr:['Feb'],
-};
-
-const PREV_EXP_MONTHS = {
-  'Q4 2025': ['Oct-25','Nov-25','Dec-25'],
-  'Q1 2026': ['Jan-26','Feb-26','Mar-26'],
-  Nov:['Oct-25'], Dec:['Nov-25'], Jan:['Dec-25'], Feb:['Jan-26'], Apr:['Feb-26'],
-};
-
-function cellStr(val) {
-  if (val === '' || val === null || val === undefined) return '""';
-  return JSON.stringify(String(val).slice(0, 200));
-}
-
-function buildPrompt(rawSheets, period, type) {
-  const { monthly, expenses, weekly } = rawSheets;
-  const fmMonths  = PERIOD_MONTHS[period]    || ['Apr'];
-  const expMonths = PERIOD_EXP_MONTHS[period] || ['Apr-26'];
-  const prevFm    = PREV_FM_MONTHS[period]   || [];
-  const prevExp   = PREV_EXP_MONTHS[period]  || [];
-
-  const monthlyText = monthly.rows.map(r => {
-    const colVals = ALL_FM_MONTHS.map(m =>
-      `${m}:${cellStr(r.cells[COL[m]])}`
-    ).join(' ');
-    return `Row${r.index}(${r.col0.slice(0,35)}): ${colVals}`;
-  }).join('\n');
-
-  const expSummaryText = expenses.summaryRows.map(r =>
-    `${r.month}: events=${r.events} security=${r.security} pest=${r.pest} TOTAL=${r.total}`
-  ).join('\n');
-
-  const topLineItems = expenses.lineItems
-    .map(li => ({ li, t: li.oct+li.nov+li.dec+li.jan+li.feb+li.mar+li.apr }))
-    .sort((a,b) => b.t - a.t)
-    .slice(0, 15)
-    .map(({ li }) => `"${li.name}": oct=${li.oct} nov=${li.nov} dec=${li.dec} jan=${li.jan} feb=${li.feb} mar=${li.mar} apr=${li.apr}`)
-    .join('\n');
-
-  const weeklyText = weekly.rows
-    .filter(r => r.col2)
-    .map(r => `"${r.col1}": latest="${r.col2.slice(0,120)}"`)
-    .join('\n');
-
-  return `Analyse FM data for Nandi Meraki — period="${period}" (${PERIOD_LABEL[period]||period}).
-
-PERIOD SCOPE: Extract data only for months [${fmMonths.join(', ')}] from FM-monthly.
-PREVIOUS PERIOD months for trend comparison: [${prevFm.join(', ')||'none'}]
-EXPENSE months to include: [${expMonths.join(', ')}]
-PREVIOUS EXPENSE months: [${prevExp.join(', ')||'none'}]
-
-FM-MONTHLY RAW DATA (col2=Oct col3=Nov col4=Dec col6=Jan col7=Feb col9=Apr):
-Handover/works = CUMULATIVE — use LAST period month value for totals.
-Tickets, invoices = per-month — sum the period months.
-${monthlyText}
-
-FM-EXPENSE SUMMARY:
-${expSummaryText}
-
-FM-EXPENSE LINE ITEMS (top 15 by total):
-${topLineItems}
-
-FM-WEEKLY LATEST DATA:
-${weeklyText}
-
-EXTRACTION RULES:
-- Row 2 = handover. Parse cumulative handed-over and occupied per month.
-  Use LAST period month for totalHandedOver, totalOccupied, occupancyRate.
-  East Block max=111, South Block max=92. South Block: 0 for Oct and Nov.
-- Row 3 = cost per sqft. Extract ₹/sqft number.
-- Row 4 = invoices. Extract count. Coverage = invoices / OCCUPIED (not handed-over).
-- Row 5 = tickets. First bullet=received, second=closed per month.
-  CATEGORIES: extract count for each from raw cell text for the 15 categories:
-  Plumbing, Electrical, Common area, Seepage, Carpentry, Hot water, Water meter,
-  Housekeeping, Lift, Gas, Car parking, Maintenance charges, Security, Video door phone, Others.
-  Jan categories genuinely missing from sheet — set categoriesNote to
-  "Category breakdown not recorded for January" and use 0 for Jan in category counts.
-  For quarterly: sum categories across all non-Jan months in period.
-- Row 6 = sustainability. For each system: status, note (≤12 words),
-  nextAction (specific next step or "Active since DATE — no disruptions").
-- Row 7 = East Block works (fraction done/total, CUMULATIVE — use latest period month).
-- Row 8 = South Block works (same).
-- Row 9 = Implementation ideas (same).
-- Row 12 = management context (use for memo, horticulture, feedback assessment).
-
-GOALS (produce exactly 12):
-1. Maintenance Cost/Sqft — benchmark ₹4–6, target <₹5, from Row3
-2. Ticket Resolution Rate — benchmark ≥85%, from Row5 closed/received
-3. Occupancy Rate — benchmark ≥60%, LAST period month from Row2
-4. East Block Works — target 100%, LAST period month from Row7
-5. South Block Works — target 100%, LAST period month from Row8
-6. Implementation of Ideas — target 100%, from Row9
-7. Invoice Coverage — target ≥100% of OCCUPIED units, from Row4 ÷ Row2-occupied
-8. Horticulture & Landscaping — MET/PARTIAL/MISSED from Row12 and weekly data
-9. Resident Feedback — MET/PARTIAL/MISSED from complaint trends and Row12
-10. Heat Pump — target Operational, from Row6
-11. Eco-STP — target Operational, from Row6
-12. Solar & WTP — target Operational, from Row6
-
-STATUS: MET=on/above target | PARTIAL=partially achieved | MISSED=below | NA=no data.
-progressPct: numeric = % of target (cap 100). Status: Operational=100, Partial=60, Pending=20.
-context: one sentence explaining why — be specific, never say "no data". If genuinely no data, say exactly why (e.g. "South Block works tracking began Dec 2025").
-
-EXPENSE: Sum only the listed expense months. Security = ~₹1,11,000/month fixed.
-
-Return this exact JSON (fill all fields, use 0/[] for missing arrays, never null in arrays):
+Return exactly this JSON (all numbers numeric, no nulls in arrays, use 0 for missing numbers):
 {
-  "periodLabel": "${PERIOD_LABEL[period]||period}",
-  "periodDates": "${PERIOD_DATES[period]||period}",
-  "months": [<month names for fmMonths>],
+  "dept": "fm",
+  "periodLabel": "${period} (${periodMonths.join(' – ')})",
   "handover": {
-    "handedOver": [<cumulative per period month>],
-    "occupied":   [<cumulative per period month>],
-    "totalHandedOver": <last period month value>,
-    "totalOccupied":   <last period month value>,
-    "occupancyRate":   <integer %>,
-    "benchmarkRate": 60
+    "eastBlock": { "received": 0, "total": 111, "pct": 0 },
+    "southBlock": { "received": 0, "total": 92, "pct": 0 },
+    "eastWorksComplete": 0, "eastWorksTotal": 0,
+    "southWorksComplete": 0, "southWorksTotal": 0,
+    "amenitiesThisPeriod": "",
+    "prioritySouthPending": "",
+    "notes": ""
   },
-  "maintenance": {
-    "costPerSqft":  [<per period month, 0 if missing>],
-    "avgCostPerSqft": <2dp average of non-zero months>,
-    "goalLine": 5,
-    "invoicesSent": [<per month>],
-    "totalInvoices": <latest month value>
-  },
-  "tickets": {
-    "received": [<per period month>],
-    "closed":   [<per period month>],
-    "totalReceived": <sum>,
-    "totalClosed":   <sum>,
-    "resolutionRate": <integer %>,
-    "prevTotalReceived": <previous period sum>,
+  "complaints": {
+    "received": 0, "closed": 0, "open": 0, "closeRate": 0,
+    "monthTrend": [{ "month": "", "received": 0, "closed": 0 }],
     "categories": [
       {"name":"Plumbing","count":0},{"name":"Electrical","count":0},
-      {"name":"Common area","count":0},{"name":"Seepage","count":0},
-      {"name":"Carpentry","count":0},{"name":"Hot water","count":0},
-      {"name":"Water meter","count":0},{"name":"Housekeeping","count":0},
+      {"name":"Common Area","count":0},{"name":"Seepage","count":0},
+      {"name":"Carpentry","count":0},{"name":"Hot Water","count":0},
+      {"name":"Water Meter","count":0},{"name":"Housekeeping","count":0},
       {"name":"Lift","count":0},{"name":"Gas","count":0},
-      {"name":"Car parking","count":0},{"name":"Maintenance charges","count":0},
-      {"name":"Security","count":0},{"name":"Video door phone","count":0},
-      {"name":"Others","count":0}
+      {"name":"Car Parking","count":0},{"name":"Security","count":0},
+      {"name":"Video Door Phone","count":0},{"name":"Others","count":0}
     ],
-    "categoriesNote": ""
+    "recurringIssue": "",
+    "insight": ""
+  },
+  "billing": {
+    "costPerSqft": 0, "benchmark": 5,
+    "eastInvoiced": 0, "eastTotal": 103,
+    "southInvoiced": 0, "southTotal": 92,
+    "waterMeters": "", "collectionIssues": "", "mygate": "",
+    "costTrend": [{ "month": "", "value": 0 }],
+    "insight": ""
+  },
+  "sustainability": {
+    "heatPump":    { "status": "", "note": "", "color": "green" },
+    "solar":       { "status": "", "note": "", "color": "amber" },
+    "ecoSTP":      { "status": "", "note": "", "color": "amber" },
+    "waterMeters": { "status": "", "note": "", "color": "green" },
+    "owc":         { "status": "", "note": "", "color": "green" },
+    "hasiruDala":  { "status": "", "note": "", "color": "green" },
+    "systemsActive": 0, "systemsTotal": 6,
+    "insight": ""
   },
   "expenses": {
-    "total":    <sum of period expense months>,
-    "perMonth": [<per expense month>],
-    "events":   [<per expense month>],
-    "security": [<per expense month>],
-    "pest":     [<per expense month>],
-    "lineItems": [{"name":"<n>","total":<sum for period>,"amounts":[<per expense month>]}]
+    "total": 0, "events": 0, "security": 0, "pest": 0,
+    "monthTrend": [{ "month": "", "total": 0, "events": 0, "security": 0, "pest": 0 }],
+    "cumulative": { "events": 0, "security": 0, "pest": 0, "total": 0 },
+    "keyItems": "",
+    "insight": ""
   },
-  "works": {
-    "eastBlock":  {"done":0,"total":0,"pct":0},
-    "southBlock": {"done":0,"total":0,"pct":0},
-    "ideas":      {"done":0,"total":0}
+  "staffing": {
+    "hkScore": 0, "securityScore": 0, "mstScore": 0,
+    "hkAttendance": 0, "securityAttendance": 0, "mstAttendance": 0,
+    "horticultureStatus": "", "rosterNotes": "", "keyChange": ""
   },
-  "previous": {
-    "occupancyRate":0,"totalOccupied":0,"totalHandedOver":0,
-    "avgCostPerSqft":0,"totalExpenses":0,"totalReceived":0,"resolutionRate":0
+  "ideas": {
+    "total": 0, "completed": 0, "inProgress": 0, "pending": 0,
+    "highlights": []
   },
-  "healthScore": 0,
-  "healthScoreTrend": "—",
-  "periodNarrative": "<4-5 sentence executive briefing: what happened this period with specific numbers, biggest achievement with number, biggest concern with number, what to watch next period specifically>",
   "highlights": {
-    "win": "<specific achievement with number>",
-    "risk": "<specific risk with number>",
-    "action": "<specific next step with deadline>"
-  },
-  "coverSummary": "<one punchy sentence ≤20 words>",
-  "goals": [
-    {"name":"","benchmark":"","target":"","actual":"","status":"MET","progressPct":0,"context":"<one sentence explaining status — be specific>"}
-  ],
-  "goalsTrend": "<3-4 sentences: what improved vs last period, what regressed, trend for next period>",
-  "ticketAnalysis": {
-    "volumeResolution": "<X received, Y closed (Z%). vs previous: better/worse. What drove change.>",
-    "topIssues": "<Top 2 categories = X% of tickets. What this means — vendor gap, defect, seasonal.>",
-    "pattern": "<One non-obvious insight — trend across months, correlation with handovers etc.>",
-    "action": "<One specific action, one owner, one deadline.>"
-  },
-  "ticketsInsight": "<≤15 words on ticket patterns>",
-  "expenseAnalysis": {
-    "totalSplit": "<Total ₹X. Security fixed ₹X/month = X% of spend. Variable = ₹X.>",
-    "variableDrivers": "<Specific items driving variable spend with ₹ amounts and reason.>",
-    "trendWatch": "<vs previous period. One item to watch next period with specific reason.>"
-  },
-  "expensesInsight": "<≤15 words, must mention security ~₹1.11L/month>",
-  "operationsSummary": "<2-3 sentences on operational health — what improved, what's lagging, what to prioritise>",
-  "operationsInsight": "<≤15 words on sustainability>",
-  "sustainabilityNotes": {
-    "heatPump":            {"status":"Partial","note":"","nextAction":""},
-    "hasirudala":          {"status":"Partial","note":"","nextAction":""},
-    "solar":               {"status":"Partial","note":"","nextAction":""},
-    "ecoSTP":              {"status":"Partial","note":"","nextAction":""},
-    "waterTreatment":      {"status":"Partial","note":"","nextAction":""},
-    "implementationIdeas": {"status":"Partial","note":"","nextAction":""}
-  },
-  "memo": {
-    "point1": "<what went well — 2-3 sentences>",
-    "point2": "<biggest risk — 2-3 sentences>",
-    "point3": "<pattern emerging — 2-3 sentences>",
-    "point4": "<recommendation — 2-3 sentences>",
-    "point5": "<metric to watch — 2-3 sentences>"
+    "win": "",
+    "risk": "",
+    "action": ""
   }
 }`;
 }
 
-const FALLBACK = {
-  periodLabel: '', periodDates: '', months: [],
-  handover:    { handedOver:[], occupied:[], totalHandedOver:0, totalOccupied:0, occupancyRate:0, benchmarkRate:60 },
-  maintenance: { costPerSqft:[], avgCostPerSqft:0, goalLine:5, invoicesSent:[], totalInvoices:0 },
-  tickets: {
-    received:[], closed:[], totalReceived:0, totalClosed:0, resolutionRate:0, prevTotalReceived:0,
-    categories:[], categoriesNote:'',
+// ---------- DM ----------
+
+const DM_SYSTEM = `You are a digital marketing analyst for Nandi Meraki (Bangalore real estate). Extract data from raw Google Sheet text.
+
+Context:
+- DM monthly report: wide sheet where Column A = metric name, and remaining columns are months in pairs (e.g. "October - Planned", "October - Achieved"). Look at the header row to identify which column = which month.
+- DM expenses: rows = expense line items, columns = months (header row 2 shows month names like "June 2023", "July 2023" etc.).
+- Target CPQL = ₹1,200. Monthly budget = ₹6L (600,000). Instagram target = 4,200. LinkedIn target = 2,500.
+- Numbers only in numeric fields.
+- Return ONLY valid raw JSON. No markdown, no backticks.`;
+
+function buildDMPrompt(rawSheets, period, periodMonths) {
+  const tabs = rawSheets.tabs || {};
+  const tabsText = Object.entries(tabs).map(([name, text]) =>
+    `=== ${name.toUpperCase()} TAB ===\n${text}`
+  ).join('\n\n');
+
+  const monthsList = periodMonths.join(', ');
+
+  return `Analyse DM data for Nandi Meraki. Period: "${period}" — focus on months: [${monthsList}]
+
+${tabsText}
+
+EXTRACTION GUIDE:
+- DM monthly report: Find the "Achieved" column(s) for each period month. Key metrics by section:
+  Section 1 "Organic Marketing": IG followers (target 1800/4200), LinkedIn (target 800/2500), Facebook, YouTube, Content Calendar adherence %.
+  Section 2 "Paid Marketing": CPL, CPQL (target 1200), % QL (qual rate, target 30%), QL count (target 330), Site Visits (target 130), Leads (target 1100).
+  Section 3 "Conversions": No. of Conversions/Bookings, Conversion Ratio, Cost per conversion.
+  For trend data: also extract the last 6-8 months before the period.
+
+- DM expenses: Find columns matching the period months. Sum line items for each channel.
+  Key channels: 99 Acres, MyGate, Magic Bricks, Housing.com, Website/Kenyt, Facebook, Instagram, Google, Wati, ChatGPT, Misc.
+  Row with "Total Expense" gives the monthly total.
+
+- For CPQL trend: extract CPQL values for the last 6-8 months to show trend.
+- For social media trend: extract Instagram and LinkedIn followers for last 6-8 months.
+- For spend trend: extract total monthly spend for last 6 months.
+
+Return exactly this JSON:
+{
+  "dept": "dm",
+  "periodLabel": "${period} (${periodMonths.join(' – ')})",
+  "leadPerformance": {
+    "cpql": { "current": 0, "target": 1200, "prevMonth": 0 },
+    "qualRate": { "current": 0, "target": 30 },
+    "ql": { "current": 0, "target": 330 },
+    "siteVisits": { "current": 0, "target": 130 },
+    "leads": { "current": 0, "target": 1100 },
+    "bookings": 0,
+    "cpqlTrend": [{ "month": "", "value": 0 }],
+    "funnelTable": [
+      { "stage": "Total Leads", "monthData": {}, "target": 1100 },
+      { "stage": "Qualified Leads", "monthData": {}, "target": 330 },
+      { "stage": "Site Visits", "monthData": {}, "target": 130 },
+      { "stage": "Bookings", "monthData": {}, "target": 3 }
+    ],
+    "insight": ""
   },
-  expenses:    { total:0, perMonth:[], events:[], security:[], pest:[], lineItems:[] },
-  works:       { eastBlock:{done:0,total:0,pct:0}, southBlock:{done:0,total:0,pct:0}, ideas:{done:0,total:0} },
-  previous:    { occupancyRate:0, totalOccupied:0, totalHandedOver:0, avgCostPerSqft:0, totalExpenses:0, totalReceived:0, resolutionRate:0 },
-  healthScore: 0, healthScoreTrend: '—',
-  periodNarrative: 'FM data loaded — detailed analysis unavailable. Please regenerate to load AI insights.',
-  highlights: {
-    win: 'Report data loaded successfully.',
-    risk: 'AI analysis unavailable — please regenerate.',
-    action: 'Click Generate to reload AI insights.',
+  "contentCalendar": {
+    "planAdherence": 0,
+    "plannedItems": "",
+    "achievedItems": "",
+    "adsRun": 0,
+    "insight": ""
   },
-  coverSummary: 'FM data loaded — analysis unavailable.',
-  goals: [],
-  goalsTrend: 'Goal trend analysis unavailable — please regenerate the report.',
-  ticketAnalysis: {
-    volumeResolution: 'Analysis unavailable.',
-    topIssues: 'Analysis unavailable.',
-    pattern: 'Analysis unavailable.',
-    action: 'Analysis unavailable.',
+  "socialMedia": {
+    "instagram": { "followers": 0, "new": 0, "target": 4200 },
+    "linkedin": { "followers": 0, "new": 0, "target": 2500 },
+    "facebook": { "followers": 0, "new": 0 },
+    "youtube": { "subscribers": 0, "new": 0 },
+    "trendMonths": [],
+    "instagramTrend": [],
+    "linkedinTrend": [],
+    "insight": ""
   },
-  ticketsInsight: 'Analysis unavailable.',
-  expenseAnalysis: {
-    totalSplit: 'Security fixed at ~₹1.11L/month; full analysis unavailable.',
-    variableDrivers: 'Analysis unavailable.',
-    trendWatch: 'Analysis unavailable.',
+  "budgetSpend": {
+    "allocatedMonthly": 600000,
+    "spentThisPeriod": 0,
+    "utilisedPct": 0,
+    "cumulativeSurplus": 0,
+    "breakdown": [
+      { "channel": "Google", "amount": 0 },
+      { "channel": "Facebook", "amount": 0 },
+      { "channel": "Instagram", "amount": 0 },
+      { "channel": "Magic Bricks", "amount": 0 },
+      { "channel": "99 Acres", "amount": 0 },
+      { "channel": "Housing.com", "amount": 0 },
+      { "channel": "Wati", "amount": 0 },
+      { "channel": "ChatGPT", "amount": 0 },
+      { "channel": "Misc", "amount": 0 }
+    ],
+    "spendTrend": [{ "month": "", "spent": 0 }],
+    "insight": ""
   },
-  expensesInsight: 'Security fixed at ~₹1.11L/month; analysis unavailable.',
-  operationsSummary: 'Operational analysis unavailable — please regenerate the report.',
-  operationsInsight: 'Analysis unavailable.',
-  sustainabilityNotes: {
-    heatPump:            { status:'Partial', note:'Status pending analysis.', nextAction:'Regenerate report for details.' },
-    hasirudala:          { status:'Partial', note:'Status pending analysis.', nextAction:'Regenerate report for details.' },
-    solar:               { status:'Partial', note:'Status pending analysis.', nextAction:'Regenerate report for details.' },
-    ecoSTP:              { status:'Partial', note:'Status pending analysis.', nextAction:'Regenerate report for details.' },
-    waterTreatment:      { status:'Partial', note:'Status pending analysis.', nextAction:'Regenerate report for details.' },
-    implementationIdeas: { status:'Partial', note:'Status pending analysis.', nextAction:'Regenerate report for details.' },
+  "newsletter": {
+    "openRate": 0,
+    "benchmark": 45,
+    "trend": [{ "month": "", "rate": 0 }],
+    "insight": ""
   },
-  memo: { point1:'—', point2:'—', point3:'—', point4:'—', point5:'—' },
+  "portalsChannels": {
+    "merakiORM": 0,
+    "targetORM": 4.8,
+    "portals": [
+      { "name": "99 Acres", "status": "Active" },
+      { "name": "Magic Bricks", "status": "Active" },
+      { "name": "Housing.com", "status": "Active" }
+    ],
+    "cpBrokers": 0,
+    "cpActive": 0,
+    "insight": ""
+  },
+  "highlights": {
+    "win": "",
+    "risk": "",
+    "action": ""
+  }
+}`;
+}
+
+// ---------- L&R ----------
+
+const LR_SYSTEM = `You are a legal and regulatory analyst for Nandi Meraki (Bangalore real estate project). Extract structured data from raw Google Sheet text.
+
+Context:
+- Land tracker and Meraki tracker are in the SAME tab, with land parcels in the upper section and regulatory approvals in the lower section.
+- Assets tab lists various asset monetisation/management items.
+- PLAN VS ACHEIVED tab has metrics as rows and monthly columns.
+- Cases tab has court cases, with recent "Current Status" columns (e.g., "Current Status May", "Current Status June").
+- For Cases: use the most recent month's status column that falls within or before the period.
+- Return ONLY valid raw JSON. No markdown, no backticks.`;
+
+function buildLRPrompt(rawSheets, period, periodMonths) {
+  const tabs = rawSheets.tabs || {};
+  const tabsText = Object.entries(tabs).map(([name, text]) =>
+    `=== ${name.toUpperCase()} TAB ===\n${text}`
+  ).join('\n\n');
+
+  const latestMonth = periodMonths[periodMonths.length - 1] || '';
+
+  return `Analyse L&R data for Nandi Meraki. Period: "${period}" — months: [${periodMonths.join(', ')}]. Latest period month: ${latestMonth}.
+
+${tabsText}
+
+EXTRACTION GUIDE:
+- Land tracker section: extract each land parcel with its survey no., registration status (Done/Pending), e-Khata status, pending regulatory items, responsible person, and any blockers.
+- Meraki tracker section (below land tracker in same tab): extract each regulatory approval item (BBMP OC, CFO, RERA, etc.) with applied/received status.
+- Assets tab: each row = one asset. Extract asset name, category, decision status, current status text, next action, whether management decision is required.
+- PLAN VS ACHEIVED tab: metrics have planned target and actual achieved per month. Look for the most recent monthly column in the period. Extract metric name, planned, actual, % achieved, status.
+- Cases tab: each row = one court case. Use the "Current Status" column for the latest period month (or most recent month available). Count totals by status (Active/Pending, Settled, Disposed).
+
+Return exactly this JSON:
+{
+  "dept": "lr",
+  "periodLabel": "${period} (${periodMonths.join(' – ')})",
+  "landTracker": {
+    "totalParcels": 0, "regDone": 0, "regPending": 0,
+    "eKhataDone": 0, "eKhataPending": 0,
+    "items": [
+      {
+        "parcel": "",
+        "area": "",
+        "type": "",
+        "regStatus": "",
+        "eKhataStatus": "",
+        "pendingItems": [],
+        "blocker": "",
+        "responsible": ""
+      }
+    ]
+  },
+  "merakiTracker": {
+    "done": 0, "pending": 0, "total": 0,
+    "items": [
+      {
+        "item": "",
+        "authority": "",
+        "applied": false,
+        "received": false,
+        "status": "",
+        "notes": ""
+      }
+    ]
+  },
+  "assets": {
+    "total": 0, "inProgress": 0, "pending": 0, "completed": 0,
+    "mgmtDecisionsRequired": 0,
+    "items": [
+      {
+        "asset": "",
+        "category": "",
+        "decisionStatus": "",
+        "currentStatus": "",
+        "nextAction": "",
+        "mgmtRequired": false
+      }
+    ]
+  },
+  "planVsAchieved": {
+    "period": "${latestMonth}",
+    "avgPct": 0,
+    "metrics": [
+      {
+        "metric": "",
+        "planned": 0,
+        "actual": 0,
+        "pct": 0,
+        "status": "",
+        "notes": ""
+      }
+    ]
+  },
+  "cases": {
+    "total": 0, "active": 0, "settled": 0, "disposed": 0, "atHighCourt": 0,
+    "items": [
+      {
+        "slNo": 0,
+        "property": "",
+        "party": "",
+        "caseNo": "",
+        "status": "",
+        "lastHearing": "",
+        "nextHearing": "",
+        "currentStatus": ""
+      }
+    ]
+  },
+  "highlights": {
+    "win": "",
+    "risk": "",
+    "action": ""
+  }
+}`;
+}
+
+// ---------- Fallbacks ----------
+
+const FM_FALLBACK = {
+  dept: 'fm', periodLabel: '',
+  handover: { eastBlock:{received:0,total:111,pct:0}, southBlock:{received:0,total:92,pct:0}, eastWorksComplete:0, eastWorksTotal:0, southWorksComplete:0, southWorksTotal:0, amenitiesThisPeriod:'', prioritySouthPending:'', notes:'' },
+  complaints: { received:0, closed:0, open:0, closeRate:0, monthTrend:[], categories:[], recurringIssue:'', insight:'Analysis unavailable — please regenerate.' },
+  billing: { costPerSqft:0, benchmark:5, eastInvoiced:0, eastTotal:103, southInvoiced:0, southTotal:92, waterMeters:'', collectionIssues:'', mygate:'', costTrend:[], insight:'' },
+  sustainability: { heatPump:{status:'',note:'',color:'amber'}, solar:{status:'',note:'',color:'amber'}, ecoSTP:{status:'',note:'',color:'amber'}, waterMeters:{status:'',note:'',color:'amber'}, owc:{status:'',note:'',color:'amber'}, hasiruDala:{status:'',note:'',color:'amber'}, systemsActive:0, systemsTotal:6, insight:'' },
+  expenses: { total:0, events:0, security:0, pest:0, monthTrend:[], cumulative:{events:0,security:0,pest:0,total:0}, keyItems:'', insight:'' },
+  staffing: { hkScore:0, securityScore:0, mstScore:0, hkAttendance:0, securityAttendance:0, mstAttendance:0, horticultureStatus:'', rosterNotes:'', keyChange:'' },
+  ideas: { total:0, completed:0, inProgress:0, pending:0, highlights:[] },
+  highlights: { win:'Report loaded — AI analysis unavailable.', risk:'Please regenerate to load insights.', action:'Click Generate again.' },
 };
+
+const DM_FALLBACK = {
+  dept: 'dm', periodLabel: '',
+  leadPerformance: { cpql:{current:0,target:1200,prevMonth:0}, qualRate:{current:0,target:30}, ql:{current:0,target:330}, siteVisits:{current:0,target:130}, leads:{current:0,target:1100}, bookings:0, cpqlTrend:[], funnelTable:[], insight:'' },
+  contentCalendar: { planAdherence:0, plannedItems:'', achievedItems:'', adsRun:0, insight:'' },
+  socialMedia: { instagram:{followers:0,new:0,target:4200}, linkedin:{followers:0,new:0,target:2500}, facebook:{followers:0,new:0}, youtube:{subscribers:0,new:0}, trendMonths:[], instagramTrend:[], linkedinTrend:[], insight:'' },
+  budgetSpend: { allocatedMonthly:600000, spentThisPeriod:0, utilisedPct:0, cumulativeSurplus:0, breakdown:[], spendTrend:[], insight:'' },
+  newsletter: { openRate:0, benchmark:45, trend:[], insight:'' },
+  portalsChannels: { merakiORM:0, targetORM:4.8, portals:[], cpBrokers:0, cpActive:0, insight:'' },
+  highlights: { win:'Report loaded — AI analysis unavailable.', risk:'Please regenerate to load insights.', action:'Click Generate again.' },
+};
+
+const LR_FALLBACK = {
+  dept: 'lr', periodLabel: '',
+  landTracker: { totalParcels:0, regDone:0, regPending:0, eKhataDone:0, eKhataPending:0, items:[] },
+  merakiTracker: { done:0, pending:0, total:0, items:[] },
+  assets: { total:0, inProgress:0, pending:0, completed:0, mgmtDecisionsRequired:0, items:[] },
+  planVsAchieved: { period:'', avgPct:0, metrics:[] },
+  cases: { total:0, active:0, settled:0, disposed:0, atHighCourt:0, items:[] },
+  highlights: { win:'Report loaded — AI analysis unavailable.', risk:'Please regenerate to load insights.', action:'Click Generate again.' },
+};
+
+const FALLBACKS = { fm: FM_FALLBACK, dm: DM_FALLBACK, lr: LR_FALLBACK };
+
+const SYSTEMS = {
+  fm: FM_SYSTEM, dm: DM_SYSTEM, lr: LR_SYSTEM,
+};
+
+// ---------- Handler ----------
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -312,62 +388,56 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
-  const { rawSheets, period, type } = req.body || {};
-  if (!rawSheets) return res.status(200).json({ ...FALLBACK, _error: 'No rawSheets provided' });
+  const { rawSheets, dept = 'fm', period, periodMonths = [] } = req.body || {};
+  const fallback = FALLBACKS[dept] || FM_FALLBACK;
 
-  const periodLabel = PERIOD_LABEL[period] || period || 'the selected period';
-  const periodDates = PERIOD_DATES[period] || period || '';
+  if (!rawSheets) {
+    return res.status(200).json({ ...fallback, _error: 'No rawSheets provided' });
+  }
 
   try {
-    const prompt = buildPrompt(rawSheets, period || 'Q1 2026', type || 'quarter');
+    let prompt;
+    if (dept === 'fm') {
+      prompt = buildFMPrompt(rawSheets, period, periodMonths);
+    } else if (dept === 'dm') {
+      prompt = buildDMPrompt(rawSheets, period, periodMonths);
+    } else if (dept === 'lr') {
+      prompt = buildLRPrompt(rawSheets, period, periodMonths);
+    } else {
+      return res.status(400).json({ error: `Unknown dept: ${dept}` });
+    }
 
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 8000,
-      system: SYSTEM,
+      system: SYSTEMS[dept],
       messages: [{ role: 'user', content: prompt }],
     });
 
     const raw = (msg.content[0]?.text || '').trim();
+    let json = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
 
-    let json = raw
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim();
-
-    // If JSON is truncated, try to close it
     let result;
     try {
       result = JSON.parse(json);
     } catch {
-      // Try closing unclosed JSON
       try {
-        const closed = json + '"}}}';
-        result = JSON.parse(closed);
+        result = JSON.parse(json + '"}}}');
       } catch {
         console.error('JSON parse failed. Raw start:', raw.slice(0, 500));
-        return res.status(200).json({
-          ...FALLBACK, periodLabel, periodDates,
-          _parseError: true,
-        });
+        return res.status(200).json({ ...fallback, periodLabel: period, _parseError: true });
       }
     }
 
     return res.status(200).json({
-      ...FALLBACK,
+      ...fallback,
       ...result,
-      // Merge nested objects so FALLBACK keys always exist
-      ticketAnalysis:  { ...FALLBACK.ticketAnalysis,  ...(result.ticketAnalysis  || {}) },
-      expenseAnalysis: { ...FALLBACK.expenseAnalysis, ...(result.expenseAnalysis || {}) },
-      highlights:      { ...FALLBACK.highlights,      ...(result.highlights      || {}) },
-      tickets: { ...FALLBACK.tickets, ...(result.tickets || {}), categories: result.tickets?.categories || [] },
-      periodLabel: result.periodLabel || periodLabel,
-      periodDates: result.periodDates || periodDates,
       fetchTime: new Date().toISOString(),
+      periodLabel: result.periodLabel || period,
     });
 
   } catch (err) {
     console.error('analyze.js error:', err.message);
-    return res.status(200).json({ ...FALLBACK, periodLabel, periodDates, _error: err.message });
+    return res.status(200).json({ ...fallback, periodLabel: period, _error: err.message });
   }
 }

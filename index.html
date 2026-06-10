@@ -1,1186 +1,1139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FM Report — Nandi Meraki</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Fenxi Analytics — Reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
-:root{
-  --maroon:#7a1a14;--maroon-dark:#5c110d;--maroon-light:#9e2219;
-  --maroon-pale:rgba(122,26,20,0.06);--maroon-pale2:rgba(122,26,20,0.11);
-  --white:#ffffff;--off-white:#f8f5f3;--light-gray:#f0ebe8;--mid-gray:#e2dbd7;
-  --text-dark:#1e1210;--text-mid:#6b4f4a;--text-light:#9c7d78;
-  --green:#0a6b6f;--green-light:#e0f2f3;
-  --red:#c62828;--red-light:#ffebee;
-  --amber:#b8692e;--amber-light:#fef3e6;
-  --blue:#2e5d93;--blue-light:#e3edf8;
-  --slide-radius:8px;
-  --card-shadow:0 2px 8px rgba(122,26,20,0.07),0 0 0 1px rgba(122,26,20,0.06);
-  --card-radius:6px;
+:root {
+  --maroon:#7a1a14;--maroon2:#9e2018;
+  --green:#0a6b6f;--green2:#0d8a8f;
+  --amber:#b8692e;--amber2:#d4803a;
+  --blue:#2e5d93;--blue2:#3a72b0;
+  --red:#c62828;
+  --bg:#f4f0eb;--card:#ffffff;
+  --text:#1a1a2e;--text-light:#6b6b7a;
+  --border:#e5e0d8;--border2:#d5cfc5;
+  --shadow:0 2px 12px rgba(0,0,0,.08);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.14);
+  --radius:12px;--font:'Inter',sans-serif;--serif:'DM Serif Display',serif;
 }
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Inter',sans-serif;background:#0a0302;background-image:radial-gradient(ellipse at 50% 0%,rgba(122,26,20,0.12) 0%,transparent 60%);display:flex;flex-direction:column;align-items:center;min-height:100vh;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+button{font-family:var(--font);cursor:pointer;border:none;background:none}
 
-/* ── LOADING ── */
-#loadingOverlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,3,2,0.97);flex-direction:column;align-items:center;justify-content:center;gap:24px;}
-.loading-spinner{width:44px;height:44px;border:3px solid rgba(122,26,20,0.25);border-top-color:var(--maroon);border-radius:50%;animation:spin 0.85s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.loading-steps{display:flex;flex-direction:column;gap:10px;align-items:center;}
-.loading-step{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;letter-spacing:0.3px;transition:all 0.4s;}
-.loading-step.inactive{color:rgba(255,255,255,0.22);}
-.loading-step.active{color:rgba(255,255,255,0.85);}
-.loading-step.done{color:rgba(122,26,20,0.7);}
-.step-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
-.loading-step.active .step-dot{animation:pulse 1s ease-in-out infinite;}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.6);}}
+/* NAV */
+.nav{display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;background:var(--maroon);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.nav-brand{font-family:var(--serif);color:#fff;font-size:18px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.nav-crumb{flex:1;display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.7);overflow:hidden}
+.nav-crumb .sep{opacity:.5}
+.nav-crumb .active{color:#fff;font-weight:500}
+.nav-back{color:rgba(255,255,255,.8);font-size:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 12px;transition:.15s;flex-shrink:0}
+.nav-back:hover{background:rgba(255,255,255,.2)}
+.nav-export{color:rgba(255,255,255,.8);font-size:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 10px;flex-shrink:0}
 
-/* ── TOAST ── */
-#updateToast{position:fixed;top:60px;right:20px;z-index:9998;background:var(--green);color:white;font-size:11px;font-weight:600;padding:7px 14px;border-radius:4px;letter-spacing:0.5px;opacity:0;transition:opacity 0.3s;pointer-events:none;}
-#updateToast.show{opacity:1;}
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center}
+.loading-box{background:white;border-radius:16px;padding:40px 48px;text-align:center;width:320px}
+.spinner{width:44px;height:44px;border:4px solid #e5e0d8;border-top-color:var(--maroon);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-step{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px}
+.loading-sub{font-size:12px;color:var(--text-light)}
+.ldots::after{content:'...';animation:dots 1.2s steps(4) infinite}
+@keyframes dots{0%,25%{content:'.'}50%{content:'..'}75%,100%{content:'...'}}
 
-/* ── NAV ── */
-.nav{position:fixed;top:0;left:0;right:0;background:rgba(8,3,2,0.96);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:100;border-bottom:1px solid rgba(255,255,255,0.06);height:48px;}
-.nav-brand{color:rgba(255,255,255,0.5);font-size:11px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;}
-.nav-controls{display:flex;gap:6px;align-items:center;}
-.nav-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);padding:5px 16px;border-radius:5px;font-size:11px;cursor:pointer;transition:all 0.18s;font-family:'Inter',sans-serif;letter-spacing:0.3px;}
-.nav-btn:hover{background:rgba(122,26,20,0.55);border-color:rgba(158,34,25,0.6);color:white;}
-.slide-counter{color:rgba(255,255,255,0.28);font-size:11px;min-width:56px;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:1px;}
+/* HOME */
+.home-view{max-width:960px;margin:0 auto;padding:64px 24px 40px}
+.home-hero{text-align:center;margin-bottom:56px}
+.home-hero h1{font-family:var(--serif);font-size:40px;color:var(--text);line-height:1.2;margin-bottom:12px}
+.home-hero p{font-size:16px;color:var(--text-light)}
+.dept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:840px;margin:0 auto}
+.dept-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);border-top:4px solid var(--maroon);padding:36px 28px;cursor:pointer;transition:transform .18s,box-shadow .18s;text-align:center}
+.dept-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.dept-card.dept-dm{border-top-color:var(--blue)}
+.dept-card.dept-lr{border-top-color:var(--green)}
+.dept-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;background:rgba(122,26,20,.1)}
+.dept-icon svg{width:28px;height:28px;stroke:var(--maroon)}
+.dept-dm .dept-icon{background:rgba(46,93,147,.1)}
+.dept-dm .dept-icon svg{stroke:var(--blue)}
+.dept-lr .dept-icon{background:rgba(10,107,111,.1)}
+.dept-lr .dept-icon svg{stroke:var(--green)}
+.dept-card h2{font-family:var(--serif);font-size:26px;margin-bottom:4px}
+.dept-card p{font-size:13px;color:var(--text-light);margin-bottom:20px}
+.dept-tag{display:inline-block;background:rgba(122,26,20,.08);color:var(--maroon);font-size:11px;font-weight:600;letter-spacing:.04em;padding:4px 10px;border-radius:20px}
+.dept-dm .dept-tag{background:rgba(46,93,147,.08);color:var(--blue)}
+.dept-lr .dept-tag{background:rgba(10,107,111,.08);color:var(--green)}
 
-/* ── PERIOD BAR ── */
-.period-bar{position:fixed;top:48px;left:0;right:0;z-index:99;background:rgba(6,2,1,0.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.05);padding:0 20px;display:flex;align-items:center;gap:12px;height:52px;overflow-x:auto;}
-.mode-tabs{display:flex;gap:2px;background:rgba(255,255,255,0.04);border-radius:6px;padding:3px;flex-shrink:0;}
-.mode-tab{background:transparent;border:none;color:rgba(255,255,255,0.4);padding:4px 11px;border-radius:4px;font-size:10px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:all 0.15s;}
-.mode-tab:hover{color:rgba(255,255,255,0.7);}
-.mode-tab.active{background:var(--maroon);color:white;}
-.period-divider{width:1px;height:22px;background:rgba(255,255,255,0.08);flex-shrink:0;}
-.period-pills{display:flex;gap:4px;flex:1;overflow-x:auto;}
-.period-pill{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.45);padding:4px 11px;border-radius:20px;font-size:10.5px;cursor:pointer;transition:all 0.15s;font-family:'Inter',sans-serif;white-space:nowrap;letter-spacing:0.2px;}
-.period-pill:hover{background:rgba(122,26,20,0.3);border-color:rgba(158,34,25,0.4);color:rgba(255,255,255,0.75);}
-.period-pill.active{background:var(--maroon);border-color:var(--maroon-light);color:white;font-weight:600;}
-.generate-btn{background:linear-gradient(135deg,var(--maroon),var(--maroon-light));border:none;color:white;padding:6px 18px;border-radius:5px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;letter-spacing:0.5px;transition:all 0.18s;flex-shrink:0;margin-left:auto;}
-.generate-btn:hover{background:linear-gradient(135deg,var(--maroon-light),#c5291e);box-shadow:0 4px 16px rgba(122,26,20,0.5);}
-.generate-btn:disabled{opacity:0.5;cursor:not-allowed;}
+/* PERIOD BAR */
+.period-bar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:56px;z-index:90;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.mode-tabs{display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:2px;flex-shrink:0}
+.mode-tab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;color:var(--text-light);transition:.15s;white-space:nowrap}
+.mode-tab.active{background:var(--maroon);color:#fff}
+.period-pills{display:flex;gap:8px;flex-wrap:wrap;flex:1}
+.period-pill{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;color:var(--text-light);background:var(--bg);border:1px solid var(--border);cursor:pointer;transition:.15s;white-space:nowrap;line-height:1.3;text-align:center}
+.period-pill:hover{border-color:var(--maroon);color:var(--maroon)}
+.period-pill.active{background:var(--maroon);color:#fff;border-color:var(--maroon)}
+.pill-sub{display:block;font-size:10px;opacity:.75}
+.gen-btn{background:var(--maroon);color:#fff;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:600;transition:.15s;white-space:nowrap;flex-shrink:0}
+.gen-btn:hover:not(:disabled){background:var(--maroon2)}
+.gen-btn:disabled{opacity:.45;cursor:not-allowed}
+.gen-btn.cached{background:var(--green)}
 
-/* ── SLIDES WRAPPER ── */
-.slides-wrapper{margin-top:100px;width:100%;max-width:1300px;padding:20px;padding-bottom:60px;}
-.slide{display:none;width:100%;min-height:calc((100vw - 40px)*9/16);max-width:1300px;position:relative;border-radius:var(--slide-radius);overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,0.8),0 0 0 1px rgba(255,255,255,0.05);flex-direction:column;}
-.slide.active{display:flex;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-.slide-enter{animation:fadeIn 0.45s ease both;}
+/* CARD GRID */
+.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;padding:24px;max-width:1200px;margin:0 auto}
+@media(max-width:900px){.card-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:580px){.card-grid{grid-template-columns:1fr}}
 
-/* ── SLIDE BASES ── */
-.slide-cover{background:var(--maroon-dark);justify-content:center;align-items:flex-start;padding:6% 8%;min-height:calc((100vw - 32px)*9/16);overflow:hidden;}
-.slide-white{background:var(--white);flex-direction:column;}
-.slide-offwhite{background:#f7f4f2;flex-direction:column;}
+/* CARDS */
+.card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:22px;cursor:pointer;transition:transform .18s,box-shadow .18s;display:flex;flex-direction:column;gap:8px}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.card-empty{cursor:default;opacity:.55}
+.card-empty:hover{transform:none;box-shadow:none}
+.card-hd{display:flex;align-items:center;justify-content:space-between}
+.card-num{font-family:var(--serif);font-size:28px;color:var(--border2);line-height:1}
+.badge{font-size:10px;font-weight:700;letter-spacing:.05em;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.b-green{background:rgba(10,107,111,.12);color:var(--green)}
+.b-amber{background:rgba(184,105,46,.12);color:var(--amber)}
+.b-red{background:rgba(198,40,40,.12);color:var(--red)}
+.b-blue{background:rgba(46,93,147,.12);color:var(--blue)}
+.b-grey{background:rgba(0,0,0,.06);color:var(--text-light)}
+.card-icon{color:var(--maroon)}
+.card-icon svg{width:22px;height:22px}
+.card-title{font-family:var(--serif);font-size:18px;line-height:1.2}
+.card-sub{font-size:11px;color:var(--text-light);line-height:1.4}
+.card-metrics{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px}
+.metric-item{min-width:0}
+.metric-val{font-size:17px;font-weight:700;line-height:1}
+.metric-lbl{font-size:10px;color:var(--text-light);margin-top:2px}
+.card-bar-wrap{margin-top:2px}
+.card-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.card-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.card-bar-lbl{font-size:10px;color:var(--text-light);margin-top:4px}
+.card-insight{font-size:11px;color:var(--text-light);line-height:1.5;flex:1}
+.card-footer{font-size:11px;color:var(--maroon);font-weight:600;margin-top:auto;padding-top:8px;border-top:1px solid var(--border)}
+.card-empty-msg{font-size:12px;color:var(--text-light);text-align:center;padding:24px 0;font-style:italic;flex:1}
 
-/* ── COVER ── */
-.cover-bg-pattern{position:absolute;inset:0;background-image:radial-gradient(circle at 75% 50%,rgba(180,60,40,0.18) 0%,transparent 60%),radial-gradient(circle at 20% 80%,rgba(80,10,5,0.3) 0%,transparent 50%);}
-.cover-grid-lines{position:absolute;inset:0;opacity:0.07;background-image:repeating-linear-gradient(0deg,transparent,transparent 48px,rgba(255,255,255,0.5) 48px,rgba(255,255,255,0.5) 49px),repeating-linear-gradient(90deg,transparent,transparent 48px,rgba(255,255,255,0.5) 48px,rgba(255,255,255,0.5) 49px);}
-.cover-diagonal{position:absolute;right:0;top:0;bottom:0;width:44%;background:linear-gradient(150deg,rgba(122,26,20,0.15) 0%,rgba(10,3,2,0.88) 100%);clip-path:polygon(14% 0%,100% 0%,100% 100%,0% 100%);}
-.cover-accent-line{position:absolute;left:8%;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,transparent,rgba(255,255,255,0.25),transparent);}
-.cover-watermark{position:absolute;right:5%;top:50%;transform:translateY(-50%);font-family:'DM Serif Display',serif;font-size:clamp(60px,13vw,180px);color:rgba(255,255,255,0.035);font-weight:400;letter-spacing:-4px;line-height:1;user-select:none;z-index:0;white-space:nowrap;}
-.cover-eyebrow{color:rgba(255,255,255,0.38);font-size:clamp(8px,0.78vw,11px);letter-spacing:4px;text-transform:uppercase;margin-bottom:2vw;font-weight:400;}
-.cover-title{color:white;font-family:'DM Serif Display',serif;font-size:clamp(30px,5vw,68px);font-weight:400;line-height:1.02;margin-bottom:1.2vw;letter-spacing:-0.5px;}
-.cover-title em{color:rgba(255,180,160,0.75);font-style:italic;}
-.cover-subtitle{color:rgba(255,255,255,0.42);font-size:clamp(10px,1vw,14px);font-weight:300;letter-spacing:2px;margin-bottom:1.8vw;}
-.cover-summary{color:rgba(255,255,255,0.62);font-size:clamp(8.5px,0.74vw,12px);font-weight:300;line-height:1.75;max-width:380px;margin-bottom:1.5vw;}
-.cover-meta{color:rgba(255,255,255,0.2);font-size:clamp(7px,0.6vw,9px);letter-spacing:1.8px;text-transform:uppercase;margin-top:auto;}
-.cover-kpi-strip{display:flex;gap:0;border:1px solid rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;align-self:flex-start;margin-top:2vw;}
-.ck{padding:10px 16px;border-right:1px solid rgba(255,255,255,0.08);min-width:80px;}
-.ck:last-child{border-right:none;}
-.ck-val{color:white;font-size:clamp(14px,1.6vw,22px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;}
-.ck-label{color:rgba(255,255,255,0.32);font-size:clamp(7px,0.55vw,8.5px);text-transform:uppercase;letter-spacing:1.5px;margin-top:3px;}
-.ck-delta{font-size:clamp(7px,0.52vw,8px);margin-top:3px;font-weight:600;}
-.ck-delta.up{color:#6fcf97;}
-.ck-delta.down{color:#eb5757;}
-.ck-delta.neu{color:rgba(255,255,255,0.38);}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.modal-box{background:var(--card);border-radius:16px;width:100%;max-width:820px;max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden;margin:auto}
+.modal-hd{display:flex;align-items:flex-start;justify-content:space-between;padding:24px 28px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
+.modal-title{font-family:var(--serif);font-size:24px;line-height:1.2}
+.modal-period{display:inline-block;font-size:12px;background:rgba(122,26,20,.08);color:var(--maroon);border-radius:12px;padding:3px 10px;margin-top:6px;font-weight:500}
+.modal-close{font-size:22px;color:var(--text-light);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0}
+.modal-close:hover{background:var(--bg)}
+.modal-body{padding:24px 28px;overflow-y:auto;display:flex;flex-direction:column;gap:22px}
+.msec{}
+.msec-hd{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text-light);text-transform:uppercase;margin-bottom:10px}
+.kpi-row{display:flex;gap:14px;flex-wrap:wrap}
+.kpi-chip{background:var(--bg);border-radius:10px;padding:14px 16px;min-width:90px;flex:1}
+.kpi-chip.kpi-green{border-left:3px solid var(--green)}
+.kpi-chip.kpi-amber{border-left:3px solid var(--amber)}
+.kpi-chip.kpi-red{border-left:3px solid var(--red)}
+.kpi-chip.kpi-blue{border-left:3px solid var(--blue)}
+.kpi-v{font-size:22px;font-weight:700;line-height:1}
+.kpi-l{font-size:10px;color:var(--text-light);margin-top:4px}
+.kpi-s{font-size:11px;color:var(--text-light);margin-top:2px}
+.callout{border-radius:8px;padding:12px 16px;font-size:13px;line-height:1.5}
+.callout.green{background:rgba(10,107,111,.08);border-left:3px solid var(--green);color:var(--green)}
+.callout.amber{background:rgba(184,105,46,.08);border-left:3px solid var(--amber);color:var(--amber2)}
+.callout.red{background:rgba(198,40,40,.08);border-left:3px solid var(--red);color:var(--red)}
+.callout.blue{background:rgba(46,93,147,.08);border-left:3px solid var(--blue);color:var(--blue)}
+.callout.grey{background:rgba(0,0,0,.04);border-left:3px solid var(--border2);color:var(--text-light)}
+.highlight-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.highlight-box{border-radius:8px;padding:14px;font-size:12px;line-height:1.5}
+.hl-label{font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.hl-win{background:rgba(10,107,111,.08);color:var(--green)}
+.hl-risk{background:rgba(184,105,46,.08);color:var(--amber2)}
+.hl-action{background:rgba(122,26,20,.08);color:var(--maroon)}
 
-/* ── SLIDE HEADER ── */
-.slide-header{background:linear-gradient(135deg,var(--maroon) 0%,var(--maroon-dark) 100%);padding:13px 26px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid rgba(0,0,0,0.15);}
-.slide-header-title{color:white;font-size:clamp(11px,1.2vw,18px);font-weight:500;letter-spacing:0.2px;}
-.slide-header-tag{color:rgba(255,255,255,0.45);font-size:clamp(7px,0.58vw,9px);text-transform:uppercase;letter-spacing:2.5px;font-weight:500;background:rgba(255,255,255,0.08);padding:3px 9px;border-radius:3px;}
-.slide-body{flex:1;padding:14px 22px 18px;overflow:hidden;display:flex;flex-direction:column;gap:11px;}
-.slide-body-row{display:flex;gap:16px;flex:1;min-height:0;}
+/* TABLES */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{background:var(--bg);padding:8px 10px;text-align:left;font-weight:600;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-light);border-bottom:1px solid var(--border)}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.4}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(0,0,0,.015)}
+.pill-done{background:rgba(10,107,111,.1);color:var(--green);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;white-space:nowrap}
+.pill-pend{background:rgba(184,105,46,.1);color:var(--amber);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;white-space:nowrap}
+.pill-na{background:rgba(0,0,0,.06);color:var(--text-light);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600}
+.pill-active{background:rgba(198,40,40,.1);color:var(--red);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600}
 
-/* ── COMMON CARDS ── */
-.kpi-card{flex:1;background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:12px 14px;position:relative;overflow:hidden;box-shadow:var(--card-shadow);}
-.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3.5px;background:var(--maroon);border-radius:6px 6px 0 0;}
-.kpi-card.green::before{background:var(--green);}.kpi-card.amber::before{background:var(--amber);}.kpi-card.blue::before{background:var(--blue);}.kpi-card.red::before{background:var(--red);}
-.kpi-label{color:var(--text-light);font-size:clamp(7px,0.6vw,9px);text-transform:uppercase;letter-spacing:1.8px;margin-bottom:5px;font-weight:600;}
-.kpi-val{color:var(--text-dark);font-size:clamp(20px,2.4vw,38px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;}
-.kpi-sub{color:var(--text-light);font-size:clamp(7px,0.57vw,9px);margin-top:4px;line-height:1.5;}
-.kpi-delta{display:inline-flex;align-items:center;gap:3px;font-size:clamp(7px,0.58vw,9px);font-weight:700;padding:2px 8px;border-radius:4px;margin-top:6px;letter-spacing:0.2px;}
-.delta-up{background:var(--green-light);color:var(--green);}
-.delta-down{background:var(--red-light);color:var(--red);}
-.delta-neu{background:var(--amber-light);color:var(--amber);}
-.kpi-row{display:flex;gap:10px;flex-shrink:0;}
-.section-title{font-size:clamp(7px,0.63vw,9.5px);font-weight:700;color:var(--maroon);text-transform:uppercase;letter-spacing:2.8px;margin-bottom:7px;padding-bottom:5px;border-bottom:1.5px solid rgba(122,26,20,0.15);flex-shrink:0;}
-.chart-wrap{position:relative;flex:1;min-height:0;background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:11px 13px;display:flex;flex-direction:column;box-shadow:var(--card-shadow);}
-.chart-title{font-size:clamp(7px,0.6vw,9px);font-weight:700;color:var(--maroon);text-transform:uppercase;letter-spacing:2px;margin-bottom:7px;flex-shrink:0;}
-.chart-canvas-wrap{flex:1;min-height:0;position:relative;}
-.chart-canvas-wrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
-.no-data-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:clamp(8px,0.7vw,11px);font-style:italic;}
-.highlight-box{background:rgba(122,26,20,0.03);border:1px solid rgba(122,26,20,0.1);border-left:3.5px solid var(--maroon);border-radius:var(--card-radius);padding:10px 13px;font-size:clamp(8px,0.65vw,10.5px);line-height:1.8;color:var(--text-dark);flex-shrink:0;}
-.highlight-box.green{border-left-color:var(--green);background:rgba(10,107,111,0.03);}
-.highlight-box.amber{border-left-color:var(--amber);background:rgba(184,105,46,0.03);}
-.highlight-box.red{border-left-color:var(--red);background:rgba(198,40,40,0.03);}
-.highlight-box strong{color:var(--maroon);}
-.badge{display:inline-flex;align-items:center;font-size:clamp(7px,0.55vw,9px);padding:2px 9px;border-radius:4px;font-weight:700;letter-spacing:0.3px;}
-.badge-green{background:var(--green-light);color:var(--green);}
-.badge-amber{background:var(--amber-light);color:var(--amber);}
-.badge-red{background:var(--red-light);color:var(--red);}
-.col-left{flex:1.4;display:flex;flex-direction:column;gap:10px;min-width:0;}
-.col-right{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;}
-.col-third{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;}
-.footnote{font-size:clamp(7px,0.54vw,9px);color:var(--text-light);margin-top:4px;font-style:italic;flex-shrink:0;line-height:1.6;}
+/* H-BARS */
+.hbar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.hbar-lbl{font-size:11px;min-width:110px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar-track{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:4px;transition:width .4s}
+.hbar-val{font-size:11px;font-weight:600;min-width:60px;text-align:right;flex-shrink:0}
 
-/* ── SLIDE 2: GOALS ── */
-.scorecard-grid{display:flex;flex-direction:column;gap:6px;flex:1;min-height:0;overflow:hidden;}
-.scorecard-col{border-radius:var(--card-radius);overflow:hidden;box-shadow:var(--card-shadow);display:flex;flex-direction:column;}
-.scorecard-col-header{padding:10px 13px;font-size:clamp(8px,0.68vw,11px);font-weight:700;letter-spacing:0.5px;color:white;flex-shrink:0;}
-.scorecard-col-header.green-hdr{background:var(--green);}.scorecard-col-header.amber-hdr{background:var(--amber);}.scorecard-col-header.red-hdr{background:var(--red);}
-.scorecard-col-body{background:white;flex:1;padding:10px 13px;display:flex;flex-direction:column;gap:7px;overflow:auto;}
-.scorecard-item{font-size:clamp(8px,0.65vw,10.5px);color:var(--text-dark);line-height:1.5;padding:6px 9px;border-radius:4px;border-left:3px solid transparent;}
-.scorecard-item.green{background:rgba(10,107,111,0.04);border-left-color:var(--green);}
-.scorecard-item.amber{background:rgba(184,105,46,0.04);border-left-color:var(--amber);}
-.scorecard-item.red{background:rgba(198,40,40,0.04);border-left-color:var(--red);}
-.scorecard-empty{color:var(--text-light);font-size:clamp(8px,0.62vw,10px);font-style:italic;padding:7px 9px;}
-.data-chips{display:flex;gap:8px;flex-shrink:0;}
-.data-chip{flex:1;background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:10px 12px;box-shadow:var(--card-shadow);}
-.data-chip-val{font-size:clamp(14px,1.5vw,22px);font-weight:700;color:var(--text-dark);line-height:1;font-variant-numeric:tabular-nums;}
-.data-chip-label{font-size:clamp(7px,0.56vw,9px);color:var(--text-light);text-transform:uppercase;letter-spacing:1.5px;margin-top:3px;font-weight:600;}
-.data-chip-sub{font-size:clamp(7px,0.54vw,8.5px);color:var(--text-mid);margin-top:3px;line-height:1.4;}
-.works-bar-bg{height:5px;background:var(--light-gray);border-radius:3px;overflow:hidden;margin-top:5px;}
-.works-bar-fill{height:100%;border-radius:3px;background:var(--maroon);}
-.works-bar-fill.green{background:var(--green);}.works-bar-fill.amber{background:var(--amber);}
+/* SUSTAINABILITY */
+.sys-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.sys-item{border-radius:8px;padding:14px;border:1px solid var(--border)}
+.sys-item.green{border-color:rgba(10,107,111,.3);background:rgba(10,107,111,.04)}
+.sys-item.amber{border-color:rgba(184,105,46,.3);background:rgba(184,105,46,.04)}
+.sys-item.red{border-color:rgba(198,40,40,.3);background:rgba(198,40,40,.04)}
+.sys-name{font-size:11px;font-weight:700;margin-bottom:4px}
+.sys-item.green .sys-name{color:var(--green)}
+.sys-item.amber .sys-name{color:var(--amber)}
+.sys-item.red .sys-name{color:var(--red)}
+.sys-status{font-size:12px;margin-bottom:3px}
+.sys-note{font-size:11px;color:var(--text-light)}
 
-/* ── SLIDE 2: GOALS (new list layout) ── */
-.goals-strip{display:flex;gap:8px;flex-shrink:0;margin-bottom:4px;}
-.goals-strip-chip{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:8px 13px;box-shadow:var(--card-shadow);text-align:center;min-width:65px;}
-.goals-strip-val{font-size:clamp(16px,1.7vw,24px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;}
-.goals-strip-val.green{color:var(--green);}.goals-strip-val.amber{color:var(--amber);}.goals-strip-val.red{color:var(--red);}
-.goals-strip-label{font-size:clamp(7px,0.56vw,9px);color:var(--text-light);text-transform:uppercase;letter-spacing:1.5px;margin-top:3px;font-weight:600;}
-.goals-list{display:flex;flex-direction:column;gap:5px;flex:1;overflow:auto;}
-.goal-row{display:flex;flex-direction:column;gap:3px;padding:7px 10px;background:white;border-radius:4px;border:1px solid var(--mid-gray);border-left:3px solid var(--mid-gray);}
-.goal-row.met{border-left-color:var(--green);background:rgba(10,107,111,0.03);}
-.goal-row.partial{border-left-color:var(--amber);background:rgba(184,105,46,0.03);}
-.goal-row.missed{border-left-color:var(--red);background:rgba(198,40,40,0.03);}
-.goal-row-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
-.goal-name{font-size:clamp(8px,0.65vw,10.5px);font-weight:600;color:var(--text-dark);flex:1;}
-.goal-actual{font-size:clamp(8px,0.65vw,10.5px);font-weight:700;color:var(--text-mid);white-space:nowrap;}
-.goal-bar-bg{height:8px;background:var(--light-gray);border-radius:4px;overflow:hidden;margin-top:1px;}
-.goal-bar-fill{height:100%;border-radius:4px;transition:width 0.6s ease;}
-.goal-bar-fill.met{background:#2d6a4f;}.goal-bar-fill.partial{background:#e07a00;}.goal-bar-fill.missed{background:#8b1a1a;}.goal-bar-fill.na{background:#aaa;}
-.goal-sub{font-size:clamp(7px,0.55vw,8.5px);color:var(--text-light);line-height:1.4;}
-.goal-context{font-size:clamp(7px,0.54vw,8.5px);color:var(--text-mid);line-height:1.45;font-style:italic;margin-top:1px;}
-.goals-trend-box{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:10px 13px;box-shadow:var(--card-shadow);flex-shrink:0;}
-.goals-trend-box p{font-size:clamp(7.5px,0.63vw,10px);color:var(--text-dark);line-height:1.7;}
+/* FOOTER */
+.dash-footer{text-align:center;padding:16px;font-size:11px;color:var(--text-light);border-top:1px solid var(--border);margin-top:4px}
 
-/* ── COVER NARRATIVE & HIGHLIGHTS ── */
-.cover-narrative{color:rgba(255,255,255,0.68);font-size:clamp(9px,0.82vw,12.5px);font-weight:300;line-height:1.75;max-width:420px;margin-top:1.2vw;}
-.cover-highlights-col{position:absolute;right:3%;top:50%;transform:translateY(-50%);z-index:2;width:30%;display:flex;flex-direction:column;gap:10px;}
-.cover-hl-card{padding:10px 14px;border-radius:5px;border-left:4px solid transparent;}
-.cover-hl-card.win{border-left-color:#2d6a4f;background:rgba(45,106,79,0.18);}
-.cover-hl-card.risk{border-left-color:#e07a00;background:rgba(224,122,0,0.14);}
-.cover-hl-card.action{border-left-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.06);}
-.cover-hl-label{font-size:clamp(7px,0.52vw,9px);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
-.cover-hl-card.win .cover-hl-label{color:#6fcf97;}
-.cover-hl-card.risk .cover-hl-label{color:#f2994a;}
-.cover-hl-card.action .cover-hl-label{color:rgba(255,255,255,0.5);}
-.cover-hl-text{font-size:clamp(8px,0.68vw,11px);line-height:1.5;color:rgba(255,255,255,0.78);}
-
-/* ── TICKET CALLOUT & ANALYSIS ── */
-.ticket-callout{padding:9px 13px;border-radius:4px;font-size:clamp(8px,0.66vw,10.5px);font-weight:600;line-height:1.5;flex-shrink:0;}
-.ticket-callout.above{background:rgba(10,107,111,0.07);border:1px solid rgba(10,107,111,0.22);color:var(--green);}
-.ticket-callout.below{background:rgba(198,40,40,0.06);border:1px solid rgba(198,40,40,0.22);color:var(--red);}
-.analysis-paras{display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
-.analysis-para{font-size:clamp(7.5px,0.62vw,10px);color:var(--text-dark);line-height:1.7;padding:6px 10px;border-radius:4px;background:rgba(122,26,20,0.02);border-left:2px solid rgba(122,26,20,0.15);}
-.analysis-para strong{color:var(--maroon);font-size:clamp(7px,0.55vw,9px);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:2px;}
-
-/* ── EXPENSE WHERE THE MONEY WENT ── */
-.exp-items-table{display:flex;flex-direction:column;gap:3px;flex:1;overflow:auto;}
-.exp-item-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:3px;}
-.exp-item-row:nth-child(even){background:rgba(0,0,0,0.025);}
-.exp-item-name{font-size:clamp(7.5px,0.62vw,10px);color:var(--text-dark);min-width:110px;font-weight:500;}
-.exp-item-bar-bg{flex:1;height:6px;background:var(--light-gray);border-radius:3px;overflow:hidden;}
-.exp-item-bar-fill{height:100%;border-radius:3px;background:var(--maroon);opacity:0.7;}
-.exp-item-amt{font-size:clamp(7.5px,0.6vw,9.5px);color:var(--maroon);font-weight:700;min-width:70px;text-align:right;font-variant-numeric:tabular-nums;}
-
-/* ── OPS SUMMARY ── */
-.ops-summary-box{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:10px 14px;box-shadow:var(--card-shadow);flex-shrink:0;}
-.ops-summary-box p{font-size:clamp(7.5px,0.64vw,10px);color:var(--text-dark);line-height:1.75;}
-.sustain-card-next{font-size:clamp(7px,0.54vw,8.5px);color:var(--text-light);font-style:italic;line-height:1.4;}
-
-/* ── SLIDE FOOTER ── */
-.slide-footer{font-size:clamp(6.5px,0.5vw,8px);color:var(--text-light);text-align:right;padding:3px 22px 5px;border-top:1px solid var(--mid-gray);flex-shrink:0;letter-spacing:0.3px;font-style:italic;}
-
-/* ── SLIDE 3: TICKETS ── */
-.spike-badge{display:inline-flex;align-items:center;gap:4px;background:var(--red-light);color:var(--red);font-size:clamp(7px,0.58vw,9px);font-weight:700;padding:3px 9px;border-radius:4px;margin-left:8px;}
-
-/* ── SLIDE 4: EXPENSES ── */
-.exp-big{font-size:clamp(28px,3.5vw,54px);font-weight:700;color:var(--text-dark);line-height:1;font-variant-numeric:tabular-nums;}
-.line-items-list{display:flex;flex-direction:column;gap:5px;flex:1;overflow:auto;}
-.line-item{display:flex;justify-content:space-between;align-items:center;padding:6px 9px;border-radius:4px;background:var(--off-white);border:1px solid var(--mid-gray);}
-.line-item-name{font-size:clamp(8px,0.65vw,10.5px);color:var(--text-dark);font-weight:500;}
-.line-item-amt{font-size:clamp(8px,0.65vw,10.5px);color:var(--maroon);font-weight:700;font-variant-numeric:tabular-nums;}
-
-/* ── SLIDE 5: OPERATIONS ── */
-.sustain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;flex-shrink:0;}
-.sustain-card{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:12px 14px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;gap:6px;}
-.sustain-card-name{font-size:clamp(8px,0.7vw,11px);font-weight:700;color:var(--text-dark);}
-.sustain-card-note{font-size:clamp(7px,0.57vw,9.5px);color:var(--text-mid);line-height:1.5;margin-top:auto;}
-.staff-panel{display:flex;gap:9px;flex-shrink:0;}
-.staff-chip{flex:1;background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:9px 11px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;gap:3px;}
-.staff-chip-val{font-size:clamp(14px,1.5vw,20px);font-weight:700;color:var(--text-dark);line-height:1;}
-.staff-chip-label{font-size:clamp(7px,0.56vw,9px);color:var(--text-light);text-transform:uppercase;letter-spacing:1.3px;font-weight:600;}
-.staff-chip-sub{font-size:clamp(7px,0.54vw,8.5px);color:var(--text-mid);}
-.memo-section{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;}
-.memo-header-bar{display:flex;align-items:baseline;gap:12px;flex-shrink:0;}
-.memo-title{font-family:'DM Serif Display',serif;font-size:clamp(14px,1.5vw,22px);color:var(--maroon);}
-.memo-meta-text{font-size:clamp(7px,0.6vw,9.5px);color:var(--text-light);letter-spacing:1.5px;text-transform:uppercase;}
-.memo-cols{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;flex:1;min-height:0;}
-.memo-col{background:white;border:1px solid var(--mid-gray);border-radius:var(--card-radius);padding:11px 12px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;gap:5px;overflow:hidden;}
-.memo-col-num{font-family:'DM Serif Display',serif;font-size:clamp(18px,2vw,28px);color:rgba(122,26,20,0.1);line-height:1;flex-shrink:0;}
-.memo-col-label{font-size:clamp(6px,0.55vw,9px);font-weight:700;color:var(--maroon);text-transform:uppercase;letter-spacing:1.8px;}
-.memo-col-text{font-size:clamp(7.5px,0.63vw,10px);color:var(--text-dark);line-height:1.7;overflow:hidden;}
-
-/* ── DOT NAV ── */
-.dot-nav{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:100;}
-.dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);cursor:pointer;transition:all 0.2s;}
-.dot.active{background:var(--maroon);border-color:var(--maroon-light);width:20px;border-radius:4px;}
-.dot:hover:not(.active){background:rgba(255,255,255,0.35);}
-.progress-bar{position:fixed;bottom:0;left:0;height:3px;background:linear-gradient(90deg,var(--maroon),var(--maroon-light));transition:width 0.3s ease;z-index:200;box-shadow:0 0 10px rgba(158,34,25,0.5);}
-
-/* ── PRINT ── */
-@media print{
-  body{background:white!important;}
-  .nav,.period-bar,.progress-bar,.dot-nav,#loadingOverlay,#updateToast{display:none!important;}
-  .slides-wrapper{margin-top:0!important;max-width:100%!important;padding:0!important;}
-  .slide{display:flex!important;page-break-after:always;page-break-inside:avoid;border-radius:0!important;box-shadow:none!important;min-height:100vh;}
-}
+/* PRINT */
+@media print{.nav,.period-bar,.modal-overlay,.loading-overlay{display:none!important}.card{break-inside:avoid}}
+@media(max-width:580px){.dept-grid{grid-template-columns:1fr}.highlight-row{grid-template-columns:1fr}.sys-grid{grid-template-columns:1fr}.modal-hd{padding:16px 20px}.modal-body{padding:16px 20px}}
 </style>
 </head>
 <body>
 
-<div id="loadingOverlay">
-  <div class="loading-spinner"></div>
-  <div class="loading-steps">
-    <div class="loading-step active" id="step1"><div class="step-dot"></div>Connecting to Google Sheets…</div>
-    <div class="loading-step inactive" id="step2"><div class="step-dot"></div>Reading facility data…</div>
-    <div class="loading-step inactive" id="step3"><div class="step-dot"></div>Analysing with AI…</div>
-    <div class="loading-step inactive" id="step4"><div class="step-dot"></div>Building your report…</div>
-  </div>
-  <div style="color:rgba(255,255,255,0.18);font-size:9px;letter-spacing:3px;text-transform:uppercase;margin-top:8px;">Nandi Meraki · FM Report</div>
-</div>
-
-<div id="updateToast">Updated just now</div>
-
-<nav class="nav">
-  <span class="nav-brand">Nandi Meraki &nbsp;·&nbsp; FM Report</span>
-  <div class="nav-controls">
-    <button class="nav-btn" onclick="prevSlide()">← Prev</button>
-    <span class="slide-counter" id="counter">— / —</span>
-    <button class="nav-btn" onclick="nextSlide()">Next →</button>
-    <button class="nav-btn" onclick="window.print()">↓ PDF</button>
-  </div>
+<nav class="nav" id="nav">
+  <div class="nav-brand" onclick="goHome()">Fenxi Analytics</div>
+  <div class="nav-crumb" id="navCrumb"></div>
+  <div id="navActions" style="display:flex;gap:8px;flex-shrink:0"></div>
 </nav>
 
-<div class="period-bar">
-  <div class="mode-tabs">
-    <button class="mode-tab active" id="tab-quarterly" onclick="setMode('quarterly')">Quarterly</button>
-    <button class="mode-tab" id="tab-monthly" onclick="setMode('monthly')">Monthly</button>
+<div class="loading-overlay" id="loadingOverlay" style="display:none">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-step" id="loadingStep">Initialising<span class="ldots"></span></div>
+    <div class="loading-sub" id="loadingSub"></div>
   </div>
-  <div class="period-divider"></div>
-  <div class="period-pills" id="periodPills"></div>
-  <button class="generate-btn" id="generateBtn" onclick="generateReport()">Generate →</button>
 </div>
 
-<div class="slides-wrapper" id="slidesWrapper">
+<div id="homeView"></div>
 
-  <!-- SLIDE 1: COVER -->
-  <div class="slide slide-cover" id="slide-1">
-    <div class="cover-bg-pattern"></div>
-    <div class="cover-grid-lines"></div>
-    <div class="cover-diagonal"></div>
-    <div class="cover-accent-line"></div>
-    <div class="cover-watermark" id="coverWatermark"></div>
-    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;max-width:58%;">
-      <div class="cover-eyebrow">Facility Management Report</div>
-      <div class="cover-title">Nandi<br>Meraki<br><em id="coverPeriodItalic"></em></div>
-      <div class="cover-subtitle" id="coverDates"></div>
-      <div class="cover-summary" id="coverSummary"></div>
-      <div class="cover-kpi-strip" id="coverKpiStrip"></div>
-      <div class="cover-meta" id="coverMeta"></div>
-    </div>
-  </div>
-
-  <!-- SLIDE 2: GOALS & PROGRESS -->
-  <div class="slide slide-offwhite" id="slide-2">
-    <div class="slide-header">
-      <span class="slide-header-title">Goals & Progress</span>
-      <span class="slide-header-tag" id="s2tag"></span>
-    </div>
-    <div class="slide-body">
-      <div class="scorecard-grid" id="scorecardGrid"></div>
-      <div class="data-chips" id="dataChips"></div>
-    </div>
-    <div class="slide-footer" id="s2footer"></div>
-  </div>
-
-  <!-- SLIDE 3: TICKETS & RESOLUTION -->
-  <div class="slide slide-white" id="slide-3">
-    <div class="slide-header">
-      <span class="slide-header-title">Tickets &amp; Resolution</span>
-      <span class="slide-header-tag" id="s3tag"></span>
-    </div>
-    <div class="slide-body">
-      <div class="kpi-row" id="s3kpis"></div>
-      <div class="slide-body-row">
-        <div class="col-left">
-          <div class="section-title" id="s3chartTitle">Tickets Received vs Closed</div>
-          <div class="chart-wrap" style="flex:1;">
-            <div class="chart-canvas-wrap" id="ticketChart"><div class="no-data-msg">No data for this period</div></div>
-          </div>
-        </div>
-        <div class="col-right">
-          <div class="section-title">Top Categories by Volume</div>
-          <div class="chart-wrap" style="flex:1;">
-            <div class="chart-canvas-wrap" id="ticketCatChart"><div class="no-data-msg">No category data</div></div>
-          </div>
-        </div>
-      </div>
-      <div id="s3callout"></div>
-      <div class="analysis-paras" id="s3analysis"></div>
-    </div>
-    <div class="slide-footer" id="s3footer"></div>
-  </div>
-
-  <!-- SLIDE 4: EXPENSES -->
-  <div class="slide slide-white" id="slide-4">
-    <div class="slide-header">
-      <span class="slide-header-title">Expenses</span>
-      <span class="slide-header-tag" id="s4tag"></span>
-    </div>
-    <div class="slide-body">
-      <div id="s4top" style="display:flex;align-items:baseline;gap:14px;flex-shrink:0;">
-        <div class="exp-big" id="s4total"></div>
-        <span class="kpi-delta" id="s4delta"></span>
-        <span style="color:var(--text-light);font-size:clamp(8px,0.65vw,10.5px);margin-left:4px;" id="s4period"></span>
-      </div>
-      <div class="slide-body-row" id="s4body"></div>
-      <div class="analysis-paras" id="s4analysis"></div>
-    </div>
-    <div class="slide-footer" id="s4footer"></div>
-  </div>
-
-  <!-- SLIDE 5: OPERATIONS & INTELLIGENCE -->
-  <div class="slide slide-offwhite" id="slide-5">
-    <div class="slide-header">
-      <span class="slide-header-title">Operations &amp; Intelligence</span>
-      <span class="slide-header-tag" id="s5tag"></span>
-    </div>
-    <div class="slide-body">
-      <div class="ops-summary-box" id="opsSummary"></div>
-      <div class="sustain-grid" id="sustainGrid"></div>
-      <div id="staffPanel" style="display:none;" class="staff-panel"></div>
-      <div class="memo-section">
-        <div class="memo-header-bar">
-          <div class="memo-title">FM Intelligence Memo</div>
-          <div class="memo-meta-text" id="memoMeta"></div>
-        </div>
-        <div class="memo-cols" id="memoCols"></div>
-      </div>
-    </div>
-    <div class="slide-footer" id="s5footer"></div>
-  </div>
-
+<div id="dashView" style="display:none">
+  <div class="period-bar" id="periodBar"></div>
+  <div class="card-grid" id="cardGrid"></div>
+  <div class="dash-footer" id="dashFooter"></div>
 </div>
 
-<div class="dot-nav" id="dotNav"></div>
-<div class="progress-bar" id="progressBar"></div>
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="closeModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title" id="modalTitle"></div>
+        <span class="modal-period" id="modalPeriod"></span>
+      </div>
+      <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
 
 <script>
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let mode = 'quarterly';
-let selectedPeriod = 'Q1 2026';
-let selectedType   = 'quarter';
-let currentSlide   = 0;
-let visibleSlides  = [];
-let charts         = {};
-let currentData    = null;
-let currentInsights= null;
-
-const CACHE_KEY = 'nm_fm_v4';
-
-const QUARTER_PILLS = [
-  { label:'Q3 2025 (Oct–Dec)', period:'Q3 2025',  type:'quarter' },
-  { label:'Q4 2025 (Jan–Mar)', period:'Q4 2025',  type:'quarter' },
-  { label:'Q1 2026 (Apr)',     period:'Q1 2026',  type:'quarter' },
-  { label:'All Time (Oct–Apr)',period:'All Time', type:'quarter' },
-];
-const MONTH_PILLS = [
-  { label:'Oct', period:'Oct', type:'month' },
-  { label:'Nov', period:'Nov', type:'month' },
-  { label:'Dec', period:'Dec', type:'month' },
-  { label:'Jan', period:'Jan', type:'month' },
-  { label:'Feb', period:'Feb', type:'month' },
-  { label:'Apr', period:'Apr', type:'month' },
-];
-
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-const safe   = (v,fb=0)   => (v!==null&&v!==undefined&&!isNaN(v))?+v:fb;
-const safeS  = (v,fb='—') => (v&&String(v).trim()&&v!=='N/A')?String(v).trim():fb;
-const fmt    = n           => Number(n).toLocaleString('en-IN');
-const fmtR   = n           => '₹'+fmt(n);
-const pct    = (a,b)       => b>0 ? Math.round(a/b*100) : 0;
-const hasArr = arr          => Array.isArray(arr)&&arr.some(v=>v>0);
-
-function deltaHtml(curr, prev, unit='%', higherBetter=true) {
-  if (!prev||prev===0) return '';
-  const diff = curr - prev;
-  const pctDiff = Math.round(Math.abs(diff)/Math.abs(prev)*100);
-  const up = diff > 0;
-  const good = higherBetter ? up : !up;
-  const cls = good ? 'delta-up' : 'delta-down';
-  const arrow = up ? '↑' : '↓';
-  if (unit==='pp') return `<span class="kpi-delta ${cls}">${arrow}${Math.abs(diff)}pp vs prev</span>`;
-  return `<span class="kpi-delta ${cls}">${arrow}${pctDiff}% vs prev</span>`;
-}
-
-function deltaSmall(curr, prev, higherBetter=true) {
-  if (!prev||prev===0) return '';
-  const diff = curr - prev;
-  const up = diff > 0;
-  const good = higherBetter ? up : !up;
-  const cls  = good ? 'up' : 'down';
-  return `<div class="ck-delta ${cls}">${up?'↑':'↓'}${Math.round(Math.abs(diff)/Math.abs(prev)*100)}% vs prev</div>`;
-}
-
-// ── PERIOD SELECTOR ───────────────────────────────────────────────────────────
-function setMode(m) {
-  mode = m;
-  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.id==='tab-'+m));
-  const pills = m === 'monthly' ? MONTH_PILLS : QUARTER_PILLS;
-  // Default: Q1 2026 for quarterly, Apr for monthly
-  const defaultPill = m === 'quarterly'
-    ? (pills.find(p => p.period === 'Q1 2026') || pills[pills.length-1])
-    : pills[pills.length-1];
-  selectedPeriod = defaultPill.period;
-  selectedType   = defaultPill.type;
-  const container = document.getElementById('periodPills');
-  container.innerHTML = pills.map(p =>
-    `<button class="period-pill${p.period===selectedPeriod?' active':''}" onclick="selectPill(this,'${p.period}','${p.type}')">${p.label}</button>`
-  ).join('');
-}
-
-function selectPill(btn, period, type) {
-  document.querySelectorAll('.period-pill').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active');
-  selectedPeriod = period;
-  selectedType   = type;
-}
-
-// ── LOADING OVERLAY ───────────────────────────────────────────────────────────
-function setStep(n) {
-  [1,2,3,4].forEach(i => {
-    const el = document.getElementById('step'+i);
-    if (el) el.className = 'loading-step ' + (i<n?'done':i===n?'active':'inactive');
-  });
-}
-
-function showLoading() {
-  document.getElementById('loadingOverlay').style.display='flex';
-  setStep(1);
-  document.querySelectorAll('.slide').forEach(s=>{s.style.display='none';s.classList.remove('active');});
-}
-
-function hideLoading() {
-  document.getElementById('loadingOverlay').style.display='none';
-}
-
-// ── CHART UTILITIES ───────────────────────────────────────────────────────────
-const CC = { maroon:'#7a1a14', maroon2:'#9e2219', green:'#0a6b6f', amber:'#b8692e', blue:'#2e5d93', red:'#c62828', mFill:'rgba(122,26,20,0.1)', gFill:'rgba(10,107,111,0.1)' };
-Chart.defaults.font.family = "'Inter',sans-serif";
-Chart.defaults.color = '#9c7d78';
-
-// Inline plugin: show values at end of horizontal bars
-const hBarLabelPlugin = {
-  id: 'hBarLabels',
-  afterDatasetsDraw(chart) {
-    if (chart.config.type !== 'bar' || chart.config.options?.indexAxis !== 'y') return;
-    const ctx = chart.ctx;
-    ctx.save();
-    chart.data.datasets.forEach((ds, di) => {
-      chart.getDatasetMeta(di).data.forEach((bar, idx) => {
-        const val = ds.data[idx];
-        if (!val) return;
-        ctx.fillStyle = '#6b4f4a';
-        ctx.font = '600 8px Inter';
-        ctx.textAlign = 'left';
-        ctx.fillText(val, bar.x + 4, bar.y + 3);
-      });
-    });
-    ctx.restore();
-  },
+// ===== CONSTANTS =====
+const PERIODS = {
+  quarter:[
+    {id:'Q3 FY25-26',label:'Q3 FY25-26',sub:'Oct–Dec 2025',months:['Oct 2025','Nov 2025','Dec 2025']},
+    {id:'Q4 FY25-26',label:'Q4 FY25-26',sub:'Jan–Mar 2026',months:['Jan 2026','Feb 2026','Mar 2026']},
+    {id:'Q1 FY26-27',label:'Q1 FY26-27',sub:'Apr–Jun 2026',months:['Apr 2026','May 2026']},
+  ],
+  month:[
+    {id:'Oct 2025',label:'Oct 2025',months:['Oct 2025']},
+    {id:'Nov 2025',label:'Nov 2025',months:['Nov 2025']},
+    {id:'Dec 2025',label:'Dec 2025',months:['Dec 2025']},
+    {id:'Jan 2026',label:'Jan 2026',months:['Jan 2026']},
+    {id:'Feb 2026',label:'Feb 2026',months:['Feb 2026']},
+    {id:'Mar 2026',label:'Mar 2026',months:['Mar 2026']},
+    {id:'Apr 2026',label:'Apr 2026',months:['Apr 2026']},
+    {id:'May 2026',label:'May 2026',months:['May 2026']},
+  ],
+  year:[
+    {id:'FY25-26',label:'FY 2025-26',sub:'Apr 2025 – Mar 2026',months:['Apr 2025','May 2025','Jun 2025','Jul 2025','Aug 2025','Sep 2025','Oct 2025','Nov 2025','Dec 2025','Jan 2026','Feb 2026','Mar 2026']},
+    {id:'FY26-27 YTD',label:'FY 2026-27 YTD',sub:'Apr – present',months:['Apr 2026','May 2026']},
+  ],
 };
-Chart.register(hBarLabelPlugin);
 
-function destroyChart(id) { try{charts[id]?.destroy();}catch(e){} delete charts[id]; }
+const DEPTS = {
+  fm:{name:'Facility Management',abbr:'FM'},
+  dm:{name:'Digital Marketing',abbr:'DM'},
+  lr:{name:'Legal & Regulatory',abbr:'L&R'},
+};
 
-function clearChart(id) {
-  destroyChart(id);
-  const el = document.getElementById(id);
-  if (el) el.innerHTML='<div class="no-data-msg">No data for this period</div>';
+// ===== STATE =====
+let S = {dept:null,period:null,periodMonths:[],mode:'quarter',data:null,loading:false};
+
+// ===== UTILS =====
+const nv = v => Number(v)||0;
+function fmtNum(v){
+  v=Math.round(v); if(v<0) return '-'+fmtNum(-v);
+  const s=String(v); if(s.length<=3) return s;
+  const l3=s.slice(-3), rest=s.slice(0,-3);
+  return rest.replace(/(\d)(?=(\d{2})+(?!\d))/g,'$1,')+','+l3;
 }
-
-function makeCanvas(id) {
-  destroyChart(id);
-  const wrap = document.getElementById(id);
-  if (!wrap) return null;
-  wrap.innerHTML='';
-  const c = document.createElement('canvas');
-  wrap.appendChild(c);
-  return c;
+function fmtR(v,short=false){
+  v=nv(v); if(!v) return '₹0';
+  if(short){
+    if(Math.abs(v)>=1e7) return '₹'+(v/1e7).toFixed(1)+' Cr';
+    if(Math.abs(v)>=1e5) return '₹'+(v/1e5).toFixed(2).replace(/\.?0+$/,'')+' L';
+    if(Math.abs(v)>=1000) return '₹'+Math.round(v/1000)+'K';
+    return '₹'+Math.round(v);
+  }
+  return '₹'+fmtNum(v);
 }
+function pct(a,b){return b?Math.round(nv(a)/nv(b)*100):0;}
+function safe(v,def='—'){return (v===undefined||v===null||v==='') ? def : v;}
+function ms(m){const map={'Jan 2026':'Jan','Feb 2026':'Feb','Mar 2026':'Mar','Apr 2026':'Apr','May 2026':'May','Jun 2026':'Jun','Oct 2025':'Oct','Nov 2025':'Nov','Dec 2025':'Dec','Jul 2026':'Jul','Aug 2026':'Aug','Sep 2026':'Sep'};return map[m]||String(m).split(' ')[0];}
 
-function barChart(id, labels, datasets, opts={}) {
-  if (!datasets.some(ds=>hasArr(ds.data))) { clearChart(id); return; }
-  const c = makeCanvas(id); if (!c) return;
-  charts[id] = new Chart(c, {
-    type:'bar',
-    data:{ labels, datasets: datasets.map(ds=>({...ds,borderRadius:3,borderSkipped:false})) },
-    options:{ responsive:true,maintainAspectRatio:false,
-      plugins:{ legend:{display:datasets.length>1,position:'top',labels:{boxWidth:11,padding:9,font:{size:9}}}, tooltip:{mode:'index',intersect:false} },
-      scales:{ x:{grid:{display:false},ticks:{font:{size:9}}}, y:{grid:{color:'#f0ebe8'},ticks:{font:{size:9},...(opts.yFmt?{callback:opts.yFmt}:{})},beginAtZero:true,...(opts.stacked?{stacked:true}:{})} },
-      ...(opts.stacked?{plugins:{...undefined}}:{}),
-    },
+// ===== CHARTS =====
+function sparkLine(values,color='#7a1a14',w=280,h=55){
+  const v=(values||[]).map(x=>nv(x));
+  if(v.length<2) return `<div style="height:${h}px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-light)">No trend data</div>`;
+  const mx=Math.max(...v,1),mn=Math.min(...v,0),rng=mx-mn||1;
+  const pts=v.map((val,i)=>{const x=10+(i/(v.length-1))*(w-20);const y=h-8-((val-mn)/rng)*(h-16);return `${x.toFixed(1)},${y.toFixed(1)}`;}).join(' ');
+  const dots=v.map((val,i)=>{const x=10+(i/(v.length-1))*(w-20);const y=h-8-((val-mn)/rng)*(h-16);return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${color}"/>`;}).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;overflow:visible"><polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${pts}"/>${dots}</svg>`;
+}
+function colBars(labels,datasets,h=80){
+  if(!labels||!labels.length) return '';
+  const nb=datasets.length, w=Math.max(280,labels.length*44*nb);
+  const bw=Math.floor((w-20)/labels.length/(nb+0.5))-2;
+  const colors=['#7a1a14','#0a6b6f','#b8692e','#2e5d93'];
+  let bars='',xlbls='';
+  labels.forEach((lbl,i)=>{
+    const gx=10+i*((w-20)/labels.length);
+    const mx=Math.max(...datasets.flatMap(d=>d.data),1);
+    datasets.forEach((ds,di)=>{
+      const bh=Math.max(2,(nv(ds.data[i])/mx)*(h-15));
+      const x=gx+di*(bw+2), y=h-12-bh;
+      bars+=`<rect x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="${bw}" height="${bh.toFixed(0)}" fill="${colors[di%4]}" rx="2"/>`;
+    });
+    xlbls+=`<text x="${(gx+(nb*(bw+2))/2).toFixed(0)}" y="${h}" text-anchor="middle" font-size="9" fill="#999">${lbl}</text>`;
   });
+  return `<div style="overflow-x:auto"><svg viewBox="0 0 ${w} ${h+4}" style="width:100%;min-width:200px;height:${h+4}px">${bars}${xlbls}</svg></div>`;
+}
+function hBarRow(label,val,max,color='#7a1a14',valStr){
+  const p=Math.min(100,Math.round(nv(val)/Math.max(nv(max),1)*100));
+  return `<div class="hbar-row"><span class="hbar-lbl">${label}</span><div class="hbar-track"><div class="hbar-fill" style="width:${p}%;background:${color}"></div></div><span class="hbar-val">${valStr!==undefined?valStr:val}</span></div>`;
+}
+function donutSvg(p,color='#7a1a14',size=70){
+  p=Math.min(100,Math.max(0,nv(p)));
+  const r=size/2-6,circ=2*Math.PI*r,fill=(p/100)*circ,cx=size/2,cy=size/2;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="7"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="7" stroke-dasharray="${fill.toFixed(1)} ${circ.toFixed(1)}" stroke-dashoffset="${(circ/4).toFixed(1)}" stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/><text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="${size>70?14:11}" font-weight="700" fill="${color}">${p}%</text></svg>`;
+}
+function pBar(p,color){return `<div class="card-bar"><div class="card-bar-fill" style="width:${Math.min(100,nv(p))}%;background:${color||'var(--maroon)'}"></div></div>`;}
+
+function hlBox(d){
+  const h=d.highlights||{};
+  if(!h.win&&!h.risk&&!h.action) return '';
+  return `<div class="msec"><div class="msec-hd">Period Highlights</div><div class="highlight-row">
+    ${h.win?`<div class="highlight-box hl-win"><div class="hl-label">Win</div>${h.win}</div>`:''}
+    ${h.risk?`<div class="highlight-box hl-risk"><div class="hl-label">Risk</div>${h.risk}</div>`:''}
+    ${h.action?`<div class="highlight-box hl-action"><div class="hl-label">Action</div>${h.action}</div>`:''}
+  </div></div>`;
 }
 
-function lineOverlay(chartId, label, data, color) {
-  const ch = charts[chartId]; if (!ch) return;
-  ch.data.datasets.push({ type:'line', label, data, borderColor:color, backgroundColor:'transparent', borderWidth:2, pointRadius:4, pointBorderColor:'white', pointBorderWidth:2, tension:0.3, order:0 });
-  ch.update();
-}
-
-function hBarChart(id, items) {
-  if (!items||!items.some(i=>i.value>0)) { clearChart(id); return; }
-  const c = makeCanvas(id); if (!c) return;
-  const palette = [CC.maroon,CC.maroon2,CC.amber,CC.blue,CC.green,'#8fb3d9','#4a9e53'];
-  charts[id] = new Chart(c, {
-    type:'bar',
-    data:{ labels:items.map(i=>i.label), datasets:[{ data:items.map(i=>i.value), backgroundColor:items.map((_,i)=>palette[i%palette.length]), borderRadius:3 }] },
-    options:{ indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.raw)}} },
-      scales:{ x:{grid:{color:'#f0ebe8'},ticks:{font:{size:9}},beginAtZero:true}, y:{grid:{display:false},ticks:{font:{size:9}}} },
-    },
-  });
-}
-
-function donutChart(id, labels, data, colors) {
-  if (!data||!data.some(v=>v>0)) { clearChart(id); return; }
-  const c = makeCanvas(id); if (!c) return;
-  charts[id] = new Chart(c, {
-    type:'doughnut',
-    data:{ labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'white' }] },
-    options:{ responsive:true,maintainAspectRatio:false,cutout:'65%',
-      plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,padding:8,font:{size:9}}}, tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ₹${fmt(ctx.raw)}`}} },
-    },
-  });
-}
-
-// ── SLIDE RENDERERS ───────────────────────────────────────────────────────────
-function renderSlide1(d, ins) {
-  const p = d.period || selectedPeriod;
-  const wm = p.replace(' 2025','').replace(' 2026','').replace('weekly-latest','Weekly').replace('weekly-previous','Weekly');
-  document.getElementById('coverWatermark').textContent = wm;
-  document.getElementById('coverPeriodItalic').textContent = d.periodLabel || p;
-  document.getElementById('coverDates').textContent = d.periodDates || '';
-
-  // Use periodNarrative for the summary block (4-5 sentences)
-  const narrative = safeS(ins.periodNarrative, safeS(ins.coverSummary, 'FM performance data loaded.'));
-  document.getElementById('coverSummary').textContent = narrative;
-
-  const now = new Date();
-  const ft  = d.fetchTime ? new Date(d.fetchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
-  document.getElementById('coverMeta').textContent =
-    'Generated ' + now.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) +
-    ' · ' + now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) +
-    '  ·  Data from Google Sheets · Last fetched ' + ft;
-
-  // KPI strip
-  const prev = d.previous || {};
-  const occ  = safe(d.handover?.occupancyRate);
-  const totO = safe(d.handover?.totalOccupied);
-  const totH = safe(d.handover?.totalHandedOver);
-  const cost = safe(d.maintenance?.avgCostPerSqft);
-  const hs   = safe(ins.healthScore);
-  const exp  = safe(d.expenses?.total);
-  const prevOcc = safe(prev.occupancyRate);
-  const prevExp = safe(prev.totalExpenses);
-  const showCost = cost > 0;
-
-  let chips = `
-    <div class="ck"><div class="ck-val">${occ}%</div><div class="ck-label">Occupancy</div>${prevOcc?deltaSmall(occ,prevOcc):'<div class="ck-delta neu">60% benchmark</div>'}</div>
-    <div class="ck"><div class="ck-val">${totO}<span style="font-size:0.5em;opacity:0.7"> of ${totH}</span></div><div class="ck-label">Units Occupied</div></div>
-    ${showCost?`<div class="ck"><div class="ck-val">₹${cost.toFixed(2)}</div><div class="ck-label">Cost/Sqft</div><div class="ck-delta ${cost<=5?'up':'down'}">${cost<=5?'↓':'↑'} vs ₹5 target</div></div>`:''}
-    <div class="ck"><div class="ck-val">${hs}</div><div class="ck-label">Health Score</div></div>
-    ${exp>0?`<div class="ck"><div class="ck-val" style="font-size:clamp(11px,1.2vw,17px);">${fmtR(exp)}</div><div class="ck-label">Total Spend</div>${prevExp?deltaSmall(exp,prevExp,false):''}</div>`:''}
-  `;
-  document.getElementById('coverKpiStrip').innerHTML = chips;
-
-  // Highlight cards — remove old one, inject fresh
-  document.querySelector('.cover-highlights-col')?.remove();
-  const hl = ins.highlights || {};
-  const hlWin    = safeS(hl.win,    '—');
-  const hlRisk   = safeS(hl.risk,   '—');
-  const hlAction = safeS(hl.action, '—');
-  const hlEl = document.createElement('div');
-  hlEl.className = 'cover-highlights-col';
-  hlEl.innerHTML = `
-    <div class="cover-hl-card win"><div class="cover-hl-label">✓ Win</div><div class="cover-hl-text">${hlWin}</div></div>
-    <div class="cover-hl-card risk"><div class="cover-hl-label">⚠ Risk</div><div class="cover-hl-text">${hlRisk}</div></div>
-    <div class="cover-hl-card action"><div class="cover-hl-label">→ Action</div><div class="cover-hl-text">${hlAction}</div></div>
-  `;
-  document.getElementById('slide-1').appendChild(hlEl);
-}
-
-function renderSlide2(d, ins) {
-  const ft = d.fetchTime ? new Date(d.fetchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
-  document.getElementById('s2tag').textContent = d.periodLabel || selectedPeriod;
-  document.getElementById('s2footer').textContent = 'Data from Google Sheets · Last fetched ' + ft;
-
-  const goals = Array.isArray(ins.goals) ? ins.goals : [];
-  const counts = { MET:0, PARTIAL:0, MISSED:0, NA:0 };
-  goals.forEach(g => { const s = g.status || 'NA'; counts[s] = (counts[s]||0) + 1; });
-
-  const ORDER = { MET:0, PARTIAL:1, MISSED:2, NA:3 };
-  const sorted = [...goals].sort((a,b) => (ORDER[a.status]??3) - (ORDER[b.status]??3));
-
-  const CLS  = { MET:'met', PARTIAL:'partial', MISSED:'missed', NA:'' };
-  const BADGE = { MET:'badge-green', PARTIAL:'badge-amber', MISSED:'badge-red', NA:'delta-neu' };
-
-  const strip = `
-    <div class="goals-strip">
-      <div class="goals-strip-chip"><div class="goals-strip-val green">${counts.MET}</div><div class="goals-strip-label">Met</div></div>
-      <div class="goals-strip-chip"><div class="goals-strip-val amber">${counts.PARTIAL}</div><div class="goals-strip-label">Partial</div></div>
-      <div class="goals-strip-chip"><div class="goals-strip-val red">${counts.MISSED}</div><div class="goals-strip-label">Missed</div></div>
-      ${counts.NA>0?`<div class="goals-strip-chip"><div class="goals-strip-val" style="color:var(--text-mid)">${counts.NA}</div><div class="goals-strip-label">N/A</div></div>`:''}
-    </div>`;
-
-  const list = sorted.length ? sorted.map(g => {
-    const cls     = CLS[g.status] || 'na';
-    const bc      = BADGE[g.status] || 'delta-neu';
-    const barPct  = Math.max(0, Math.min(100, g.progressPct || 0));
-    const barCls  = cls || 'na';
-    const ctx     = g.context ? `<div class="goal-context">${g.context}</div>` : '';
-    return `<div class="goal-row ${cls}">
-      <div class="goal-row-top">
-        <span class="goal-name">${g.name||''}</span>
-        <span class="goal-actual">${g.actual||''}</span>
-        <span class="badge ${bc}">${g.status||'NA'}</span>
-      </div>
-      <div class="goal-bar-bg"><div class="goal-bar-fill ${barCls}" style="width:${barPct}%"></div></div>
-      <div class="goal-sub">${g.target||''} · ${g.benchmark||''}</div>
-      ${ctx}
-    </div>`;
-  }).join('') : '<div class="scorecard-empty" style="padding:12px;">No goals data for this period.</div>';
-
-  // Goals trend summary
-  const trend = safeS(ins.goalsTrend, '');
-  const trendHtml = trend ? `<div class="goals-trend-box"><p>${trend}</p></div>` : '';
-
-  document.getElementById('scorecardGrid').innerHTML = strip + `<div class="goals-list">${list}</div>` + trendHtml;
-
-  // Data chips
-  const east  = d.works?.eastBlock  || {};
-  const south = d.works?.southBlock || {};
-  const ideas = d.works?.ideas      || {};
-  const inv   = safe(d.maintenance?.totalInvoices);
-  const totH  = safe(d.handover?.totalHandedOver);
-  const cost  = safe(d.maintenance?.avgCostPerSqft);
-
-  const workChip = (label, done, total) => {
-    if (!total) return '';
-    const p = Math.round(done/total*100);
-    const bc = p>=80?'green':p>=50?'amber':'';
-    return `<div class="data-chip">
-      <div class="data-chip-val">${done}<span style="font-size:0.55em;opacity:0.6">/${total}</span></div>
-      <div class="data-chip-label">${label}</div>
-      <div class="works-bar-bg"><div class="works-bar-fill ${bc}" style="width:${p}%"></div></div>
-      <div class="data-chip-sub">${p}% complete · ${total-done} remaining</div>
-    </div>`;
-  };
-
-  let chips = workChip('East Block Works', safe(east.done), safe(east.total))
-            + workChip('South Block Works', safe(south.done), safe(south.total));
-
-  if (inv > 0) chips += `<div class="data-chip">
-    <div class="data-chip-val">${inv}</div>
-    <div class="data-chip-label">Invoices Sent</div>
-    <div class="data-chip-sub">${totH>0?pct(inv,totH)+'% of '+totH+' units':''}</div>
+// ===== CARD BUILDER =====
+function buildCard(num,title,sub,badge,bc,iconSvg,metrics,progress,insight,onclick){
+  const mH=(metrics||[]).map(m=>`<div class="metric-item"><div class="metric-val">${m.val}</div><div class="metric-lbl">${m.lbl}</div></div>`).join('');
+  const pH=progress?`<div class="card-bar-wrap">${pBar(progress.pct,progress.color)}<div class="card-bar-lbl">${progress.label}</div></div>`:'';
+  return `<div class="card" onclick="${onclick}">
+    <div class="card-hd"><div class="card-num">${num}</div><span class="badge ${bc}">${badge}</span></div>
+    <div class="card-icon">${iconSvg}</div>
+    <h3 class="card-title">${title}</h3>
+    <p class="card-sub">${sub}</p>
+    <div class="card-metrics">${mH}</div>
+    ${pH}
+    ${insight?`<p class="card-insight">${insight}</p>`:''}
+    <div class="card-footer">View details &rarr;</div>
   </div>`;
-
-  if (ideas.total > 0) chips += `<div class="data-chip">
-    <div class="data-chip-val">${ideas.done}<span style="font-size:0.55em;opacity:0.6">/${ideas.total}</span></div>
-    <div class="data-chip-label">Ideas Implemented</div>
-    <div class="data-chip-sub">${pct(ideas.done,ideas.total)}% of approved ideas</div>
-  </div>`;
-
-  if (cost > 0) chips += `<div class="data-chip">
-    <div class="data-chip-val">₹${cost.toFixed(2)}</div>
-    <div class="data-chip-label">Cost / Sqft</div>
-    <div class="data-chip-sub">vs ₹5 target · ${cost<=5?'On track':'Above target'}</div>
-  </div>`;
-
-  document.getElementById('dataChips').innerHTML = chips || '<div style="color:var(--text-light);font-size:11px;font-style:italic;">No works data for this period.</div>';
 }
 
-function renderSlide3(d, ins) {
-  const ft = d.fetchTime ? new Date(d.fetchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
-  document.getElementById('s3tag').textContent = d.periodLabel || selectedPeriod;
-  document.getElementById('s3footer').textContent = 'Data from Google Sheets · Last fetched ' + ft;
+// ===== ICONS =====
+const IC={
+  home:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+  alert:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  bill:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+  leaf:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 8C8 10 5.9 16.17 3.82 19.9C5.78 16.72 9.39 14 17 14v6l5-5-5-5V8z"/></svg>`,
+  wallet:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8L6 7h12z"/><circle cx="17" cy="13" r="1"/></svg>`,
+  users:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>`,
+  target:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+  cal:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  share:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
+  mail:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
+  globe:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>`,
+  map:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+  bldg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="18"/><line x1="8" y1="21" x2="8" y2="11"/><line x1="16" y1="21" x2="16" y2="11"/><rect x="8" y="11" width="8" height="5"/></svg>`,
+  grid:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`,
+  bar:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  gavel:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 6l-8.5 8.5 2 2L16 8z"/><path d="M18 2l4 4-2 2-4-4z"/><line x1="3" y1="21" x2="9" y2="15"/></svg>`,
+};
 
-  const rcvd   = d.tickets?.received  || [];
-  const clsd   = d.tickets?.closed    || [];
-  const months = d.months             || [];
-  const totR   = safe(d.tickets?.totalReceived);
-  const totC   = safe(d.tickets?.totalClosed);
-  const rr     = safe(d.tickets?.resolutionRate);
-  const prevR  = safe(d.tickets?.prevTotalReceived);
-  const rrColor = rr>=85?'green':rr>=70?'amber':'red';
-  const spike   = prevR>0 && totR>0 && (totR-prevR)/prevR > 0.5;
-  const spikePct= prevR>0 ? Math.round((totR-prevR)/prevR*100) : 0;
-  const outstanding = totR > totC ? (totR - totC) : 0;
+// ===== FM CARDS =====
+function fmCards(d){
+  const h=d.handover||{},east=h.eastBlock||{},south=h.southBlock||{};
+  const c=d.complaints||{},b=d.billing||{},su=d.sustainability||{};
+  const ex=d.expenses||{},st=d.staffing||{};
+  const eP=east.pct||pct(east.received,east.total||111);
+  const cr=nv(c.closeRate);
+  const cps=nv(b.costPerSqft);
+  const sysA=nv(su.systemsActive);
+  return [
+    buildCard('01','Handover & Works','East Block · South Block · Balance Works',
+      eP>=85?'On Track':eP>=65?'In Progress':'Needs Attention',eP>=85?'b-green':eP>=65?'b-amber':'b-red',
+      IC.home,
+      [{val:`${safe(east.received,'—')}/${east.total||111}`,lbl:'East Block Apts'},{val:`${safe(south.received,'—')}/${south.total||92}`,lbl:'South Block Apts'},{val:`${safe(h.eastWorksComplete,'—')}/${h.eastWorksTotal||'?'}`,lbl:'East Works'}],
+      {pct:eP,label:`East block ${eP}% handed over`,color:eP>=85?'var(--green)':'var(--amber)'},
+      h.notes||'',`openFMModal('handover')`),
 
-  document.getElementById('s3kpis').innerHTML = `
-    <div class="kpi-card amber">
-      <div class="kpi-label">Total Received</div>
-      <div class="kpi-val" style="font-size:clamp(18px,2vw,30px);">${fmt(totR)}</div>
-      ${spike?`<span class="spike-badge">⚠ +${spikePct}% spike</span>`:''}
-      ${deltaHtml(totR,prevR,'%',false)}
-    </div>
-    <div class="kpi-card green">
-      <div class="kpi-label">Total Closed</div>
-      <div class="kpi-val" style="font-size:clamp(18px,2vw,30px);">${fmt(totC)}</div>
-      <div class="kpi-sub">${outstanding>0?outstanding+' outstanding':'All resolved'}</div>
-    </div>
-    <div class="kpi-card ${rrColor}">
-      <div class="kpi-label">Resolution Rate</div>
-      <div class="kpi-val">${rr}%</div>
-      <div class="kpi-sub">Benchmark: 85%+</div>
-      <span class="kpi-delta ${rr>=85?'delta-up':rr>=70?'delta-neu':'delta-down'}">${rr>=85?'Above benchmark':rr>=70?'Near benchmark':'Below benchmark'}</span>
-    </div>`;
+    buildCard('02','MyGate Complaints','Received · Resolved · Categories',
+      cr>=85?'On Track':cr>=70?'Needs Attention':'Critical',cr>=85?'b-green':cr>=70?'b-amber':'b-red',
+      IC.alert,
+      [{val:safe(c.received,'—'),lbl:'Received'},{val:safe(c.closed,'—'),lbl:'Resolved'},{val:cr?`${cr}%`:'—',lbl:'Close Rate'}],
+      {pct:cr,label:`${cr}% close rate — benchmark 85%`,color:cr>=85?'var(--green)':'var(--amber)'},
+      c.insight||'',`openFMModal('complaints')`),
 
-  if (selectedType==='quarter'||months.length>1) {
-    document.getElementById('s3chartTitle').textContent = 'Tickets Received vs Closed — by Month';
-    barChart('ticketChart', months, [
-      { label:'Received', data:rcvd, backgroundColor:CC.maroon },
-      { label:'Closed',   data:clsd, backgroundColor:CC.green },
-    ]);
-  } else {
-    document.getElementById('s3chartTitle').textContent = 'Tickets — '+(months[0]||'');
-    barChart('ticketChart', ['Received','Closed'], [
-      { label:'Count', data:[totR,totC], backgroundColor:[CC.maroon,CC.green] },
-    ]);
-  }
+    buildCard('03','Billing & Accounts','Cost/Sqft · Invoices · Collections',
+      cps>0&&cps<=5?'On Track':cps>5.5?'Above Benchmark':'Monitoring',cps>0&&cps<=5?'b-green':cps>5.5?'b-red':'b-amber',
+      IC.bill,
+      [{val:cps?`₹${cps.toFixed(2)}`:'—',lbl:'Cost / Sqft'},{val:`${safe(b.eastInvoiced,'—')}/${b.eastTotal||103}`,lbl:'East Invoiced'}],
+      {pct:pct(b.eastInvoiced,b.eastTotal||103),label:`${pct(b.eastInvoiced,b.eastTotal||103)}% East block invoiced`,color:'var(--maroon)'},
+      b.insight||'',`openFMModal('billing')`),
 
-  // Category breakdown — top 8, with Jan-specific note
-  const catNote = d.tickets?.categoriesNote || '';
-  const isJanOnly = selectedPeriod === 'Jan' || (months.length===1 && months[0]==='Jan');
-  const rawCats  = (d.tickets?.categories || []).filter(c => c.count > 0);
-  const top8Cats = rawCats.sort((a,b)=>b.count-a.count).slice(0,8);
+    buildCard('04','Sustainability Systems','Heat Pump · Solar · STP · Water · Waste',
+      sysA>=5?'On Track':sysA>=3?'Partial':'Needs Attention',sysA>=5?'b-green':sysA>=3?'b-amber':'b-red',
+      IC.leaf,
+      [{val:`${sysA}/${su.systemsTotal||6}`,lbl:'Systems Active'}],
+      {pct:pct(sysA,su.systemsTotal||6)*100/100,label:`${sysA} of ${su.systemsTotal||6} sustainability systems active`,color:sysA>=5?'var(--green)':'var(--amber)'},
+      su.insight||'',`openFMModal('sustainability')`),
 
-  if (isJanOnly || rawCats.length === 0) {
-    const msg = isJanOnly ? 'Category breakdown not recorded for January' : (catNote || 'Category data not available for this period');
-    const wrap = document.getElementById('ticketCatChart');
-    if (wrap) wrap.innerHTML = `<div class="no-data-msg" style="font-style:italic;text-align:center;padding:12px;">${msg}</div>`;
-  } else {
-    hBarChart('ticketCatChart', top8Cats.map(c=>({label:c.name,value:c.count})));
-  }
+    buildCard('05','Expenses','Events · Security · Pest Control',
+      'Monitoring','b-amber',IC.wallet,
+      [{val:ex.total?fmtR(ex.total,true):'—',lbl:'Period Total'},{val:ex.security?fmtR(ex.security,true):'—',lbl:'Security'},{val:ex.pest?fmtR(ex.pest,true):'₹0',lbl:'Pest Control'}],
+      null,ex.insight||'',`openFMModal('expenses')`),
 
-  // Resolution callout
-  const calloutEl = document.getElementById('s3callout');
-  if (rr >= 85) {
-    calloutEl.innerHTML = `<div class="ticket-callout above">✓ ON TRACK — Above 85% benchmark. Maintain current resolution velocity.</div>`;
-  } else if (totR > 0) {
-    const nextMonthMap = { Oct:'Nov', Nov:'Dec', Dec:'Jan', Jan:'Feb', Feb:'Mar', Apr:'May', Q3:'end of Q4', Q4:'end of Q1', 'Q1':'end of Q2', 'All Time':'next quarter' };
-    const nextM = nextMonthMap[selectedPeriod] || 'next month';
-    calloutEl.innerHTML = `<div class="ticket-callout below">⚠ BELOW BENCHMARK — ${outstanding} tickets outstanding. Resolution must reach 85% by ${nextM}.</div>`;
-  } else {
-    calloutEl.innerHTML = '';
-  }
-
-  // 4 analysis paragraphs
-  const ta = ins.ticketAnalysis || {};
-  const analysisEl = document.getElementById('s3analysis');
-  analysisEl.innerHTML = [
-    ['Volume & Resolution', ta.volumeResolution],
-    ['Top Issues', ta.topIssues],
-    ['Pattern', ta.pattern],
-    ['Action', ta.action],
-  ].filter(([,v]) => v && v !== 'Analysis unavailable.').map(([label, text]) =>
-    `<div class="analysis-para"><strong>${label}</strong>${text}</div>`
-  ).join('') || `<div class="analysis-para"><strong>Analysis</strong>${safeS(ins.ticketsInsight,'Analysis unavailable.')}</div>`;
+    buildCard('06','Staffing & Setup','HK · Security · MST · Horticulture',
+      nv(st.hkScore)>=4?'On Track':nv(st.hkScore)>=3?'Good':'Needs Attention',nv(st.hkScore)>=4?'b-green':nv(st.hkScore)>=3?'b-amber':'b-red',
+      IC.users,
+      [{val:st.hkScore?`${st.hkScore}/5`:'—',lbl:'HK Score'},{val:st.securityScore?`${st.securityScore}/5`:'—',lbl:'Security'},{val:st.hkAttendance?`${st.hkAttendance}%`:'—',lbl:'Attendance'}],
+      {pct:(nv(st.hkScore)/5)*100,label:`HK score ${st.hkScore||'—'}/5`,color:nv(st.hkScore)>=4?'var(--green)':'var(--amber)'},
+      st.keyChange||'',`openFMModal('staffing')`),
+  ].join('');
 }
 
-function renderSlide4(d, ins) {
-  const ft = d.fetchTime ? new Date(d.fetchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
-  document.getElementById('s4tag').textContent = d.periodLabel || selectedPeriod;
-  document.getElementById('s4footer').textContent = 'Data from Google Sheets · Last fetched ' + ft;
+// ===== DM CARDS =====
+function dmCards(d){
+  const l=d.leadPerformance||{},ct=d.contentCalendar||{};
+  const sm=d.socialMedia||{},bs=d.budgetSpend||{};
+  const nl=d.newsletter||{},pc=d.portalsChannels||{};
+  const cpql=nv(l.cpql?.current),igP=pct(sm.instagram?.followers,sm.instagram?.target||4200);
+  const adh=nv(ct.planAdherence),or=nv(nl.openRate);
+  return [
+    buildCard('01','Lead & Performance','CPQL · Qualified Leads · Site Visits · Bookings',
+      cpql>0&&cpql<=1200?'On Track':cpql>0&&cpql<=2400?'Needs Attention':'Off Track',cpql>0&&cpql<=1200?'b-green':cpql>0&&cpql<=2400?'b-amber':'b-red',
+      IC.target,
+      [{val:cpql?fmtR(cpql,true):'—',lbl:'CPQL (tgt ₹1,200)'},{val:safe(l.ql?.current,'—'),lbl:'QLs'},{val:safe(l.siteVisits?.current,'—'),lbl:'Site Visits'},{val:safe(l.bookings,'0'),lbl:'Bookings'}],
+      {pct:cpql?Math.min(100,Math.round(1200/Math.max(cpql,1)*100)):0,label:`CPQL ${cpql?fmtR(cpql,true):'—'} vs ₹1,200 target`,color:cpql<=1200?'var(--green)':'var(--amber)'},
+      l.insight||'',`openDMModal('leads')`),
 
-  const total     = safe(d.expenses?.total);
-  const prevTotal = safe(d.previous?.totalExpenses);
-  const months    = d.months || [];
-  const expMonths = d.expenses?.perMonth?.length > 0 ? (d.expenses.perMonth.length > months.length ? d.expenses.perMonth : months) : months;
-  const perMonth  = d.expenses?.perMonth  || [];
-  const events    = d.expenses?.events    || [];
-  const security  = d.expenses?.security  || [];
-  const pest      = d.expenses?.pest      || [];
-  const lineItems = (d.expenses?.lineItems || []).filter(li => li.total > 0).sort((a,b) => b.total - a.total);
+    buildCard('02','Content Calendar','Posts · Reels · Stories · Ads',
+      adh>=85?'On Track':adh>=70?'Partial':'Behind',adh>=85?'b-green':adh>=70?'b-amber':'b-red',
+      IC.cal,
+      [{val:adh?`${adh}%`:'—',lbl:'Plan Adherence'},{val:safe(ct.adsRun,'—'),lbl:'Ads Run'}],
+      {pct:adh,label:`${adh}% content calendar adherence`,color:adh>=85?'var(--green)':'var(--amber)'},
+      ct.achievedItems||ct.insight||'',`openDMModal('content')`),
 
-  document.getElementById('s4total').textContent = total > 0 ? fmtR(total) : '—';
-  document.getElementById('s4period').textContent = d.periodLabel || '';
-  document.getElementById('s4delta').innerHTML = prevTotal>0 ? deltaHtml(total,prevTotal,'%',false) : '';
+    buildCard('03','Social Media Performance','Instagram · LinkedIn · Facebook · YouTube',
+      igP>=90?'On Track':igP>=75?'Progressing':'Building',igP>=90?'b-green':igP>=75?'b-amber':'b-blue',
+      IC.share,
+      [{val:sm.instagram?.followers?fmtNum(sm.instagram.followers):'—',lbl:'Instagram'},{val:sm.linkedin?.followers?fmtNum(sm.linkedin.followers):'—',lbl:'LinkedIn'},{val:sm.instagram?.new?`+${sm.instagram.new}`:'—',lbl:'New IG'}],
+      {pct:igP,label:`Instagram ${igP}% to ${fmtNum(sm.instagram?.target||4200)} target`,color:'var(--blue)'},
+      sm.insight||'',`openDMModal('social')`),
 
-  const body = document.getElementById('s4body');
-  const maxLineAmt = lineItems[0]?.total || 1;
+    buildCard('04','Budget & Spend','Channels · Utilisation · Surplus',
+      'Monitoring','b-amber',IC.wallet,
+      [{val:bs.spentThisPeriod?fmtR(bs.spentThisPeriod,true):'—',lbl:'Period Spend'},{val:bs.utilisedPct?`${bs.utilisedPct}%`:'—',lbl:'Utilised'},{val:bs.cumulativeSurplus?fmtR(bs.cumulativeSurplus,true):'—',lbl:'Surplus'}],
+      {pct:nv(bs.utilisedPct),label:`${nv(bs.utilisedPct)}% of ₹6L monthly budget used`,color:'var(--blue)'},
+      bs.insight||'',`openDMModal('budget')`),
 
-  // "WHERE THE MONEY WENT" — proportional bar table (all items)
-  const lineItemsHtml = lineItems.length > 0 ? `
-    <div class="col-right" style="min-width:200px;">
-      <div class="section-title">Where the Money Went</div>
-      <div class="chart-wrap" style="flex:1;padding:10px 12px;">
-        <div class="exp-items-table">
-          ${lineItems.map(item => {
-            const barW = Math.round(item.total / maxLineAmt * 100);
-            return `<div class="exp-item-row">
-              <span class="exp-item-name">${item.name}</span>
-              <div class="exp-item-bar-bg"><div class="exp-item-bar-fill" style="width:${barW}%"></div></div>
-              <span class="exp-item-amt">${fmtR(item.total)}</span>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-    </div>` : '';
+    buildCard('05','Newsletter','Open Rate · Industry Benchmark',
+      or>=45?'Above Benchmark':'Below Benchmark',or>=45?'b-green':'b-amber',
+      IC.mail,
+      [{val:or?`${or}%`:'—',lbl:'Open Rate'},{val:`${nl.benchmark||45}%`,lbl:'Benchmark'}],
+      {pct:or,label:`${or}% open rate`,color:or>=45?'var(--green)':'var(--amber)'},
+      nl.insight||'',`openDMModal('newsletter')`),
 
-  if (selectedType==='month') {
-    body.innerHTML = `
-      <div class="col-left">
-        <div class="section-title">Spend Breakdown</div>
-        <div class="chart-wrap" style="flex:1;">
-          <div class="chart-canvas-wrap" id="expDonut"><div class="no-data-msg">No data</div></div>
-        </div>
-      </div>
-      ${lineItemsHtml}`;
-    setTimeout(() => {
-      const evtTotal  = events.reduce((a,b)=>a+b,0);
-      const secTotal  = security.reduce((a,b)=>a+b,0);
-      const pestTotal = pest.reduce((a,b)=>a+b,0);
-      donutChart('expDonut', ['Events','Security','Pest'], [evtTotal,secTotal,pestTotal], [CC.amber,CC.maroon,CC.green]);
-    }, 50);
-  } else {
-    // Use expense month labels if available (may differ from FM months for Q4 which includes Mar)
-    const expLabels = months.length > 0 ? months : ['Period'];
-    body.innerHTML = `
-      <div class="col-left">
-        <div class="section-title">Monthly Totals with Trend</div>
-        <div class="chart-wrap" style="flex:1;">
-          <div class="chart-canvas-wrap" id="expBar"><div class="no-data-msg">No data</div></div>
-        </div>
-      </div>
-      ${lineItemsHtml}`;
-    setTimeout(() => {
-      // For Q4 which has 3 expense months (Jan/Feb/Mar) but 2 FM months, use perMonth length for labels
-      const barLabels = perMonth.length > expLabels.length
-        ? [...expLabels, 'Mar']
-        : expLabels;
-      barChart('expBar', barLabels, [
-        { label:'Total Spend', data:perMonth, backgroundColor:CC.maroon+'99' },
-      ], { yFmt: v=>'₹'+fmt(v) });
-      lineOverlay('expBar', 'Trend', perMonth, CC.maroon);
-    }, 50);
-  }
-
-  // Expense analysis paragraphs
-  const ea = ins.expenseAnalysis || {};
-  const analysisEl = document.getElementById('s4analysis');
-  analysisEl.innerHTML = [
-    ['Total & Split', ea.totalSplit],
-    ['Variable Drivers', ea.variableDrivers],
-    ['Trend & Watch', ea.trendWatch],
-  ].filter(([,v]) => v && v !== 'Analysis unavailable.').map(([label, text]) =>
-    `<div class="analysis-para"><strong>${label}</strong>${text}</div>`
-  ).join('') || `<div class="analysis-para"><strong>Analysis</strong>${safeS(ins.expensesInsight,'Analysis unavailable.')}</div>`;
+    buildCard('06','Portals & Channels','ORM · 99 Acres · Magic Bricks · Housing.com',
+      nv(pc.merakiORM)>=4.5?'On Track':nv(pc.merakiORM)>=4.0?'Progressing':'Needs Attention',nv(pc.merakiORM)>=4.5?'b-green':nv(pc.merakiORM)>=4.0?'b-amber':'b-red',
+      IC.globe,
+      [{val:pc.merakiORM?`${pc.merakiORM}★`:'—',lbl:'ORM Rating'},{val:`${pc.targetORM||4.8}★`,lbl:'Target'},{val:pc.cpBrokers||'—',lbl:'CP Brokers'}],
+      {pct:pct(pc.merakiORM,pc.targetORM||4.8)*100/100,label:`ORM ${pc.merakiORM||'—'} targeting ${pc.targetORM||4.8}★`,color:'var(--blue)'},
+      pc.insight||'',`openDMModal('portals')`),
+  ].join('');
 }
 
-function renderSlide5(d, ins) {
-  const ft = d.fetchTime ? new Date(d.fetchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
-  document.getElementById('s5tag').textContent = d.periodLabel || selectedPeriod;
-  document.getElementById('s5footer').textContent = 'Data from Google Sheets · Last fetched ' + ft;
-  document.getElementById('memoMeta').textContent = (d.periodLabel||selectedPeriod) + ' · ' + new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+// ===== LR CARDS =====
+function lrCards(d){
+  const lt=d.landTracker||{},mt=d.merakiTracker||{};
+  const as=d.assets||{},pva=d.planVsAchieved||{},cs=d.cases||{};
+  const rP=pct(lt.regDone,lt.totalParcels||7),mtP=pct(mt.done,mt.total||1),pvP=nv(pva.avgPct);
+  return [
+    buildCard('01','Land Tracker','Registration · E-Khata · Pending Actions',
+      rP>=80?'On Track':rP>=50?'In Progress':'Pending',rP>=80?'b-green':rP>=50?'b-amber':'b-red',
+      IC.map,
+      [{val:`${safe(lt.regDone,'—')}/${lt.totalParcels||7}`,lbl:'Reg Done'},{val:`${safe(lt.eKhataDone,'—')}/${lt.totalParcels||7}`,lbl:'E-Khata Done'}],
+      {pct:rP,label:`${rP}% registration complete`,color:rP>=80?'var(--green)':'var(--amber)'},
+      '',`openLRModal('land')`),
 
-  // Operations summary
-  const opsSummary = safeS(ins.operationsSummary, '');
-  const opsSummaryEl = document.getElementById('opsSummary');
-  if (opsSummary && opsSummary !== 'Analysis unavailable.') {
-    opsSummaryEl.style.display = '';
-    opsSummaryEl.innerHTML = `<p>${opsSummary}</p>`;
-  } else {
-    opsSummaryEl.style.display = 'none';
-  }
+    buildCard('02','Meraki Tracker','BBMP · RERA · CFO · OC · Other Approvals',
+      mtP>=70?'On Track':mtP>=40?'In Progress':'Pending',mtP>=70?'b-green':mtP>=40?'b-amber':'b-red',
+      IC.bldg,
+      [{val:`${safe(mt.done,'—')}/${mt.total||14}`,lbl:'Approvals Done'},{val:safe(mt.pending,'—'),lbl:'Pending'}],
+      {pct:mtP,label:`${mt.done||0} of ${mt.total||14} approvals received`,color:mtP>=70?'var(--green)':'var(--amber)'},
+      '',`openLRModal('meraki')`),
 
-  // Sustainability cards
-  const SKEYS = ['heatPump','hasirudala','solar','ecoSTP','waterTreatment','implementationIdeas'];
-  const SLABELS = { heatPump:'Heat Pump', hasirudala:'Hasirudala / Dry Waste', solar:'Solar', ecoSTP:'Eco-STP', waterTreatment:'Water / WTP', implementationIdeas:'Implementation Ideas' };
-  const sNotes = ins.sustainabilityNotes || {};
-  const sData  = d.sustainability || [];
+    buildCard('03','Assets','Studio · Citadel · Managed Properties',
+      as.mgmtDecisionsRequired>2?'Decisions Needed':'Monitoring',as.mgmtDecisionsRequired>2?'b-amber':'b-blue',
+      IC.grid,
+      [{val:safe(as.total,'—'),lbl:'Total Assets'},{val:safe(as.inProgress,'—'),lbl:'In Progress'},{val:safe(as.mgmtDecisionsRequired,'—'),lbl:'Mgmt Decisions'}],
+      null,'',`openLRModal('assets')`),
 
-  document.getElementById('sustainGrid').innerHTML = SKEYS.map(k => {
-    const fromIns  = sNotes[k] || {};
-    const fromData = sData.find(s=>s.key===k) || {};
-    const status     = fromIns.status     || fromData.status   || 'Pending';
-    const note       = fromIns.note       || fromData.rawValue || 'Status unavailable.';
-    const nextAction = fromIns.nextAction || '';
-    const bc = status==='Operational'?'badge-green':status==='Partial'?'badge-amber':'badge-red';
-    return `<div class="sustain-card">
-      <div class="sustain-card-name">${SLABELS[k]||k}</div>
-      <span class="badge ${bc}">${status}</span>
-      <div class="sustain-card-note">${note}</div>
-      ${nextAction?`<div class="sustain-card-next">${nextAction}</div>`:''}
-    </div>`;
-  }).join('');
+    buildCard('04','Plan vs Achieved','Escalations · Legal KPIs · Targets',
+      pvP>=90?'On Track':pvP>=70?'Partial':'Behind',pvP>=90?'b-green':pvP>=70?'b-amber':'b-red',
+      IC.bar,
+      [{val:pvP?`${pvP}%`:'—',lbl:'Avg Achievement'},{val:safe(pva.period,'—'),lbl:'Period'}],
+      {pct:pvP,label:`${pvP}% average plan achievement`,color:pvP>=90?'var(--green)':'var(--amber)'},
+      '',`openLRModal('pva')`),
 
-  // Weekly staff panel
-  const staffEl = document.getElementById('staffPanel');
-  if (selectedType==='week' && d.weekly) {
-    const w = d.weekly;
-    staffEl.style.display='flex';
-    staffEl.innerHTML = `
-      <div class="staff-chip"><div class="staff-chip-val">${w.scoring?.hk||0}/${w.scoring?.max||5}</div><div class="staff-chip-label">Housekeeping</div><div class="staff-chip-sub">Attendance: ${w.attendance?.hk||100}%</div></div>
-      <div class="staff-chip"><div class="staff-chip-val">${w.scoring?.security||0}/${w.scoring?.max||5}</div><div class="staff-chip-label">Security</div><div class="staff-chip-sub">Attendance: ${w.attendance?.security||100}%</div></div>
-      <div class="staff-chip"><div class="staff-chip-val">${w.scoring?.mst||0}/${w.scoring?.max||5}</div><div class="staff-chip-label">MST</div><div class="staff-chip-sub">Attendance: ${w.attendance?.mst||100}%</div></div>
-      <div class="staff-chip"><div class="staff-chip-val">${w.complaints?.received||0}</div><div class="staff-chip-label">Complaints Rcvd</div><div class="staff-chip-sub">${w.complaints?.closed||0} closed this week</div></div>
-      <div class="staff-chip"><div class="staff-chip-val">${w.eastBlock?.done||0}/${w.eastBlock?.total||0}</div><div class="staff-chip-label">East Block</div><div class="staff-chip-sub">Balance works</div></div>
-      <div class="staff-chip"><div class="staff-chip-val">${w.southBlock?.done||0}/${w.southBlock?.total||0}</div><div class="staff-chip-label">South Block</div><div class="staff-chip-sub">Balance works</div></div>`;
-  } else {
-    staffEl.style.display='none';
-  }
+    buildCard('05','Cases','Court Cases · Status · Next Hearings',
+      nv(cs.active)<=10?'Monitoring':nv(cs.active)<=15?'Active':'High Volume',nv(cs.active)<=10?'b-blue':nv(cs.active)<=15?'b-amber':'b-red',
+      IC.gavel,
+      [{val:safe(cs.total,'—'),lbl:'Total'},{val:safe(cs.active,'—'),lbl:'Active'},{val:safe(cs.settled,'—'),lbl:'Settled'}],
+      null,'',`openLRModal('cases')`),
+  ].join('');
+}
 
-  // Memo
-  const memo = ins.memo || {};
-  const LABELS = ['What went well','Biggest risk','Pattern emerging','Recommendation','Metric to watch'];
-  document.getElementById('memoCols').innerHTML = ['point1','point2','point3','point4','point5'].map((k,i)=>`
-    <div class="memo-col">
-      <div class="memo-col-num">0${i+1}</div>
-      <div class="memo-col-label">${LABELS[i]}</div>
-      <div class="memo-col-text">${safeS(memo[k],'Analysis unavailable.')}</div>
+function buildEmptyCards(dept){
+  const count=dept==='lr'?5:6;
+  return Array.from({length:count},(_,i)=>`
+    <div class="card card-empty">
+      <div class="card-hd"><div class="card-num">0${i+1}</div><span class="badge b-grey">—</span></div>
+      <div class="card-empty-msg">Select a period above and click Generate to load data</div>
     </div>`).join('');
 }
 
-function renderAll(data, insights) {
-  ['slide1','slide2','slide3','slide4','slide5'].forEach((_,i)=>{
-    try {
-      const fns = [renderSlide1,renderSlide2,renderSlide3,renderSlide4,renderSlide5];
-      fns[i](data,insights);
-    } catch(e) { console.warn('Slide '+(i+1)+' render error:',e); }
-  });
+function buildCards(dept,data){
+  if(!data) return buildEmptyCards(dept);
+  if(dept==='fm') return fmCards(data);
+  if(dept==='dm') return dmCards(data);
+  if(dept==='lr') return lrCards(data);
+  return '';
 }
 
-// ── SLIDE NAV ─────────────────────────────────────────────────────────────────
-function slideHasData(n, d) {
-  if (!d) return n===1||n===2||n===4||n===5;
-  switch(n) {
-    case 1: return true;
-    case 2: return true;
-    case 3: return (d.tickets?.totalReceived||0)>0;
-    case 4: return true;  // always show expenses slide
-    case 5: return true;
-    default: return true;
-  }
+// ===== FM MODALS =====
+function openFMModal(sec){
+  const d=S.data||{},pl=d.periodLabel||S.period;
+  const map={
+    handover:['Handover & Works',fmHandoverModal],
+    complaints:['MyGate Complaints',fmComplaintsModal],
+    billing:['Billing & Accounts',fmBillingModal],
+    sustainability:['Sustainability Systems',fmSustainabilityModal],
+    expenses:['Expenses',fmExpensesModal],
+    staffing:['Staffing & Setup',fmStaffingModal],
+  };
+  const [title,fn]=map[sec]||['—',()=>''];
+  openModal(title,pl,fn(d));
 }
 
-function buildVisible(d) { return [1,2,3,4,5].filter(n=>slideHasData(n,d)); }
-
-function showSlide(idx) {
-  if (!visibleSlides.length) return;
-  idx = Math.max(0, Math.min(idx, visibleSlides.length-1));
-  currentSlide = idx;
-  const n = visibleSlides[idx];
-  document.querySelectorAll('.slide').forEach(s=>{s.style.display='none';s.classList.remove('active','slide-enter');});
-  const el = document.getElementById('slide-'+n);
-  if (el) { el.style.display='flex'; el.classList.add('active'); void el.offsetWidth; el.classList.add('slide-enter'); }
-  document.getElementById('counter').textContent = (idx+1)+' / '+visibleSlides.length;
-  document.getElementById('progressBar').style.width = ((idx+1)/visibleSlides.length*100)+'%';
-  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+function fmHandoverModal(d){
+  const h=d.handover||{},east=h.eastBlock||{},south=h.southBlock||{};
+  const eP=east.pct||pct(east.received,east.total||111);
+  const sP=south.pct||pct(south.received,south.total||92);
+  const eWP=pct(h.eastWorksComplete,h.eastWorksTotal||1);
+  const sWP=pct(h.southWorksComplete,h.southWorksTotal||1);
+  return `<div class="msec"><div class="msec-hd">Apartment Handover</div>
+    <div class="kpi-row">
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${safe(east.received,'—')}/${east.total||111}</div><div class="kpi-l">East Block</div><div class="kpi-s">${eP}% handed over</div></div>
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${safe(south.received,'—')}/${south.total||92}</div><div class="kpi-l">South Block</div><div class="kpi-s">${sP}% handed over</div></div>
+    </div>
+    <div style="margin-top:12px">
+      ${hBarRow('East Block',eP,100,'var(--maroon)',`${eP}% (${east.received||0}/${east.total||111})`)}
+      ${hBarRow('South Block',sP,100,'var(--amber)',`${sP}% (${south.received||0}/${south.total||92})`)}
+    </div>
+  </div>
+  <div class="msec"><div class="msec-hd">Balance Works</div>
+    <div class="kpi-row">
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${safe(h.eastWorksComplete,'—')}/${h.eastWorksTotal||'?'}</div><div class="kpi-l">East Works Done</div><div class="kpi-s">${eWP}% complete</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${safe(h.southWorksComplete,'—')}/${h.southWorksTotal||'?'}</div><div class="kpi-l">South Works Done</div><div class="kpi-s">${sWP}% complete</div></div>
+    </div>
+    ${h.eastWorksTotal?`<div style="margin-top:12px">
+      ${hBarRow('East Works',eWP,100,'var(--blue)',`${eWP}%`)}
+      ${hBarRow('South Works',sWP,100,'var(--green)',`${sWP}%`)}
+    </div>`:''}
+  </div>
+  ${h.amenitiesThisPeriod?`<div class="msec"><div class="msec-hd">Amenities This Period</div><div class="callout blue">${h.amenitiesThisPeriod}</div></div>`:''}
+  ${h.prioritySouthPending?`<div class="msec"><div class="msec-hd">Priority South Works Pending</div><div class="callout amber">${h.prioritySouthPending}</div></div>`:''}
+  ${h.notes?`<div class="msec"><div class="msec-hd">Notes</div><div class="callout grey">${h.notes}</div></div>`:''}
+  ${hlBox(d)}`;
 }
 
-function nextSlide() { showSlide(currentSlide+1); }
-function prevSlide() { showSlide(currentSlide-1); }
+function fmComplaintsModal(d){
+  const c=d.complaints||{};
+  const trend=c.monthTrend||[];
+  const cats=(c.categories||[]).filter(x=>x.count>0).sort((a,b)=>b.count-a.count);
+  const maxC=cats.length?Math.max(...cats.map(x=>x.count)):1;
+  const cr=nv(c.closeRate);
+  return `<div class="msec"><div class="msec-hd">Summary</div>
+    <div class="kpi-row">
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${safe(c.received,'—')}</div><div class="kpi-l">Received</div></div>
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${safe(c.closed,'—')}</div><div class="kpi-l">Resolved</div></div>
+      <div class="kpi-chip ${cr>=85?'kpi-green':'kpi-amber'}"><div class="kpi-v">${cr}%</div><div class="kpi-l">Close Rate</div><div class="kpi-s">Benchmark: 85%</div></div>
+      <div class="kpi-chip kpi-red"><div class="kpi-v">${safe(c.open,'—')}</div><div class="kpi-l">Outstanding</div></div>
+    </div>
+  </div>
+  ${trend.length>1?`<div class="msec"><div class="msec-hd">Monthly Trend</div>
+    ${colBars(trend.map(t=>ms(t.month)),[{data:trend.map(t=>t.received),label:'Received'},{data:trend.map(t=>t.closed),label:'Resolved'}],75)}
+  </div>`:''}
+  ${cats.length?`<div class="msec"><div class="msec-hd">Category Breakdown</div>
+    ${cats.slice(0,10).map(c=>hBarRow(c.name,c.count,maxC,'var(--maroon)',c.count)).join('')}
+  </div>`:''}
+  ${c.recurringIssue?`<div class="msec"><div class="msec-hd">Recurring Issue</div><div class="callout amber">${c.recurringIssue}</div></div>`:''}
+  <div class="callout ${cr>=85?'green':'amber'}">${cr>=85?'On Track':'Below Benchmark'} — ${cr}% close rate ${cr>=85?'exceeds':'is below'} 85% target. ${c.open||0} tickets outstanding.</div>
+  ${hlBox(d)}`;
+}
 
-document.addEventListener('keydown', e=>{
-  if (e.key==='ArrowRight'||e.key==='ArrowDown') nextSlide();
-  if (e.key==='ArrowLeft' ||e.key==='ArrowUp')   prevSlide();
-});
+function fmBillingModal(d){
+  const b=d.billing||{};
+  const trend=b.costTrend||[];
+  const cps=nv(b.costPerSqft);
+  return `<div class="msec"><div class="msec-hd">Billing Summary</div>
+    <div class="kpi-row">
+      <div class="kpi-chip ${cps>0&&cps<=5?'kpi-green':'kpi-amber'}"><div class="kpi-v">${cps?'₹'+cps.toFixed(2):'—'}</div><div class="kpi-l">Cost / Sqft</div><div class="kpi-s">Benchmark ₹5</div></div>
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${safe(b.eastInvoiced,'—')}/${b.eastTotal||103}</div><div class="kpi-l">East Invoiced</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${safe(b.southInvoiced,'—')}/${b.southTotal||92}</div><div class="kpi-l">South Invoiced</div></div>
+    </div>
+  </div>
+  ${trend.length>1?`<div class="msec"><div class="msec-hd">Cost / Sqft Trend</div>
+    ${sparkLine(trend.map(t=>t.value),'#7a1a14')}
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-light);margin-top:4px"><span>${ms(trend[0]?.month||'')}</span><span>${ms(trend[trend.length-1]?.month||'')}</span></div>
+  </div>`:''}
+  <div class="msec"><div class="msec-hd">Service Status</div>
+    <table class="tbl"><tr><th>Item</th><th>Status</th></tr>
+      <tr><td>Water Meters</td><td>${safe(b.waterMeters,'—')}</td></tr>
+      <tr><td>MyGate Integration</td><td>${safe(b.mygate,'—')}</td></tr>
+      <tr><td>Collection Issues</td><td>${safe(b.collectionIssues,'Nil')}</td></tr>
+    </table>
+  </div>
+  ${b.insight?`<div class="callout ${cps>0&&cps<=5?'green':'amber'}">${b.insight}</div>`:''}
+  ${hlBox(d)}`;
+}
 
-function rebuildDots() {
-  document.getElementById('dotNav').innerHTML = visibleSlides.map((_,i)=>
-    `<div class="dot${i===currentSlide?' active':''}" onclick="showSlide(${i})"></div>`
+function fmSustainabilityModal(d){
+  const su=d.sustainability||{};
+  const sysList=[
+    {key:'heatPump',name:'Heat Pump'},{key:'solar',name:'Solar'},
+    {key:'ecoSTP',name:'Eco STP'},{key:'waterMeters',name:'Water Meters / Aegir'},
+    {key:'owc',name:'OWC Organic Waste'},{key:'hasiruDala',name:'Hasiru Dala Dry Waste'},
+  ];
+  const sysH=sysList.map(s=>{const sys=su[s.key]||{},col=sys.color||'amber';
+    return `<div class="sys-item ${col}"><div class="sys-name">${s.name}</div><div class="sys-status">${safe(sys.status,'—')}</div>${sys.note?`<div class="sys-note">${sys.note}</div>`:''}</div>`;
+  }).join('');
+  const sysA=nv(su.systemsActive),sysT=nv(su.systemsTotal)||6;
+  return `<div class="msec"><div class="msec-hd">System Overview</div>
+    <div class="kpi-row" style="align-items:center">
+      ${donutSvg(pct(sysA,sysT)*100/100,'var(--green)',80)}
+      <div class="kpi-chip ${sysA>=5?'kpi-green':'kpi-amber'}" style="flex:1"><div class="kpi-v">${sysA}/${sysT}</div><div class="kpi-l">Systems Active</div></div>
+    </div>
+  </div>
+  <div class="msec"><div class="msec-hd">System Status</div><div class="sys-grid">${sysH}</div></div>
+  ${su.insight?`<div class="callout ${sysA>=5?'green':'amber'}">${su.insight}</div>`:''}
+  ${hlBox(d)}`;
+}
+
+function fmExpensesModal(d){
+  const ex=d.expenses||{},trend=ex.monthTrend||[],cum=ex.cumulative||{};
+  return `<div class="msec"><div class="msec-hd">Period Expenses</div>
+    <div class="kpi-row">
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${ex.total?fmtR(ex.total,true):'—'}</div><div class="kpi-l">Total</div></div>
+      <div class="kpi-chip kpi-red"><div class="kpi-v">${ex.security?fmtR(ex.security,true):'—'}</div><div class="kpi-l">Security Share</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${ex.events?fmtR(ex.events,true):'₹0'}</div><div class="kpi-l">Events / Special</div></div>
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${ex.pest?fmtR(ex.pest,true):'₹0'}</div><div class="kpi-l">Pest Control</div></div>
+    </div>
+  </div>
+  ${trend.length>1?`<div class="msec"><div class="msec-hd">Monthly Breakdown</div>
+    ${colBars(trend.map(t=>ms(t.month)),[{data:trend.map(t=>t.security),label:'Security'},{data:trend.map(t=>t.events),label:'Events'},{data:trend.map(t=>t.pest),label:'Pest'}],75)}
+  </div>`:''}
+  ${cum.total?`<div class="msec"><div class="msec-hd">Cumulative (Oct 2025 onwards)</div>
+    <table class="tbl"><tr><th>Category</th><th>Cumulative Total</th></tr>
+      <tr><td>Security Share</td><td>${fmtR(cum.security)}</td></tr>
+      <tr><td>Events / Special</td><td>${fmtR(cum.events)}</td></tr>
+      <tr><td>Pest Control</td><td>${fmtR(cum.pest)}</td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>${fmtR(cum.total)}</strong></td></tr>
+    </table>
+  </div>`:''}
+  ${ex.keyItems?`<div class="callout amber">${ex.keyItems}</div>`:''}
+  ${hlBox(d)}`;
+}
+
+function fmStaffingModal(d){
+  const st=d.staffing||{};
+  return `<div class="msec"><div class="msec-hd">Performance Scores & Attendance</div>
+    <table class="tbl"><tr><th>Category</th><th>Score (/5)</th><th>Attendance</th></tr>
+      <tr><td>Housekeeping</td><td>${st.hkScore?`${st.hkScore}/5`:'—'}</td><td>${st.hkAttendance?`${st.hkAttendance}%`:'—'}</td></tr>
+      <tr><td>Security</td><td>${st.securityScore?`${st.securityScore}/5`:'—'}</td><td>${st.securityAttendance?`${st.securityAttendance}%`:'—'}</td></tr>
+      <tr><td>MST</td><td>${st.mstScore?`${st.mstScore}/5`:'—'}</td><td>${st.mstAttendance?`${st.mstAttendance}%`:'—'}</td></tr>
+    </table>
+  </div>
+  <div class="msec"><div class="msec-hd">Score Bars</div>
+    ${hBarRow('HK',nv(st.hkScore),5,'var(--maroon)',`${st.hkScore||0}/5`)}
+    ${hBarRow('Security',nv(st.securityScore),5,'var(--green)',`${st.securityScore||0}/5`)}
+    ${hBarRow('MST',nv(st.mstScore),5,'var(--amber)',`${st.mstScore||0}/5`)}
+  </div>
+  ${st.horticultureStatus?`<div class="msec"><div class="msec-hd">Horticulture Executive</div><div class="callout amber">${st.horticultureStatus}</div></div>`:''}
+  ${st.rosterNotes?`<div class="msec"><div class="msec-hd">Roster</div><div class="callout grey">${st.rosterNotes}</div></div>`:''}
+  ${st.keyChange?`<div class="msec"><div class="msec-hd">Key Change This Period</div><div class="callout blue">${st.keyChange}</div></div>`:''}
+  ${hlBox(d)}`;
+}
+
+// ===== DM MODALS =====
+function openDMModal(sec){
+  const d=S.data||{},pl=d.periodLabel||S.period;
+  const map={
+    leads:['Lead & Performance',dmLeadsModal],
+    content:['Content Calendar',dmContentModal],
+    social:['Social Media Performance',dmSocialModal],
+    budget:['Budget & Spend',dmBudgetModal],
+    newsletter:['Newsletter',dmNewsletterModal],
+    portals:['Portals & Channels',dmPortalsModal],
+  };
+  const [title,fn]=map[sec]||['—',()=>''];
+  openModal(title,pl,fn(d));
+}
+
+function dmLeadsModal(d){
+  const l=d.leadPerformance||{},ft=l.funnelTable||[],trend=l.cpqlTrend||[];
+  const months=[...new Set(ft.flatMap(r=>Object.keys(r.monthData||{})))];
+  const cpql=nv(l.cpql?.current);
+  return `<div class="msec"><div class="msec-hd">Lead KPIs</div>
+    <div class="kpi-row">
+      <div class="kpi-chip ${cpql<=1200?'kpi-green':'kpi-red'}"><div class="kpi-v">${cpql?fmtR(cpql,true):'—'}</div><div class="kpi-l">CPQL</div><div class="kpi-s">Target ₹1,200</div></div>
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${l.ql?.current||'—'}</div><div class="kpi-l">Qualified Leads</div><div class="kpi-s">Target ${l.ql?.target||330}</div></div>
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${l.siteVisits?.current||'—'}</div><div class="kpi-l">Site Visits</div><div class="kpi-s">Target ${l.siteVisits?.target||130}</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${l.bookings||'0'}</div><div class="kpi-l">Bookings</div></div>
+    </div>
+  </div>
+  ${trend.length>1?`<div class="msec"><div class="msec-hd">CPQL Trend</div>
+    ${sparkLine(trend.map(t=>t.value),'#2e5d93')}
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-light);margin-top:4px"><span>${ms(trend[0]?.month||'')}</span><span>${ms(trend[trend.length-1]?.month||'')}</span></div>
+  </div>`:''}
+  ${ft.length?`<div class="msec"><div class="msec-hd">Funnel by Month</div>
+    <div style="overflow-x:auto"><table class="tbl">
+      <tr><th>Stage</th>${months.map(m=>`<th>${ms(m)}</th>`).join('')}<th>Target</th></tr>
+      ${ft.map(row=>`<tr><td>${row.stage}</td>${months.map(m=>`<td>${(row.monthData||{})[m]||'—'}</td>`).join('')}<td>${row.target||'—'}</td></tr>`).join('')}
+    </table></div>
+  </div>`:''}
+  ${l.insight?`<div class="callout amber">${l.insight}</div>`:''}
+  ${hlBox(d)}`;
+}
+
+function dmContentModal(d){
+  const ct=d.contentCalendar||{},adh=nv(ct.planAdherence);
+  return `<div class="msec"><div class="msec-hd">Content Performance</div>
+    <div class="kpi-row" style="align-items:center">
+      ${donutSvg(adh,'var(--blue)',80)}
+      <div class="kpi-chip kpi-blue" style="flex:1"><div class="kpi-v">${adh}%</div><div class="kpi-l">Plan Adherence</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${safe(ct.adsRun,'—')}</div><div class="kpi-l">Ads Run</div></div>
+    </div>
+  </div>
+  ${ct.plannedItems?`<div class="msec"><div class="msec-hd">Planned vs Achieved</div>
+    <table class="tbl"><tr><th>Category</th><th>Detail</th></tr>
+      <tr><td>Planned</td><td>${ct.plannedItems}</td></tr>
+      <tr><td>Achieved</td><td>${safe(ct.achievedItems,'—')}</td></tr>
+    </table>
+  </div>`:''}
+  ${ct.insight?`<div class="callout ${adh>=85?'green':'amber'}">${ct.insight}</div>`:''}
+  ${hlBox(d)}`;
+}
+
+function dmSocialModal(d){
+  const sm=d.socialMedia||{},ig=sm.instagram||{},li=sm.linkedin||{},fb=sm.facebook||{},yt=sm.youtube||{};
+  const igT=sm.instagramTrend||[],months=sm.trendMonths||[];
+  return `<div class="msec"><div class="msec-hd">Follower Counts</div>
+    <div class="kpi-row">
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${ig.followers?fmtNum(ig.followers):'—'}</div><div class="kpi-l">Instagram</div><div class="kpi-s">${ig.new?`+${ig.new} this period`:''} · Target ${fmtNum(ig.target||4200)}</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${li.followers?fmtNum(li.followers):'—'}</div><div class="kpi-l">LinkedIn</div><div class="kpi-s">${li.new?`+${li.new} this period`:''} · Target ${fmtNum(li.target||2500)}</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${fb.followers?fmtNum(fb.followers):'—'}</div><div class="kpi-l">Facebook</div><div class="kpi-s">${fb.new?`+${fb.new} this period`:''}</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${yt.subscribers?fmtNum(yt.subscribers):'—'}</div><div class="kpi-l">YouTube</div><div class="kpi-s">${yt.new?`+${yt.new} this period`:''}</div></div>
+    </div>
+  </div>
+  ${igT.length>1?`<div class="msec"><div class="msec-hd">Instagram Follower Trend</div>
+    ${sparkLine(igT,'#2e5d93')}
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-light);margin-top:4px"><span>${ms(months[0]||'')}</span><span>${ms(months[months.length-1]||'')}</span></div>
+  </div>`:''}
+  <div class="msec"><div class="msec-hd">Progress to Target</div>
+    ${ig.followers?hBarRow('Instagram',pct(ig.followers,ig.target||4200),100,'var(--blue)',`${pct(ig.followers,ig.target||4200)}% (${fmtNum(ig.followers)}/${fmtNum(ig.target||4200)})`):''}
+    ${li.followers?hBarRow('LinkedIn',pct(li.followers,li.target||2500),100,'var(--blue)',`${pct(li.followers,li.target||2500)}% (${fmtNum(li.followers)}/${fmtNum(li.target||2500)})`):''}
+  </div>
+  ${sm.insight?`<div class="callout blue">${sm.insight}</div>`:''}
+  ${hlBox(d)}`;
+}
+
+function dmBudgetModal(d){
+  const bs=d.budgetSpend||{},breakdown=(bs.breakdown||[]).filter(x=>x.amount>0).sort((a,b)=>b.amount-a.amount);
+  const maxA=breakdown.length?Math.max(...breakdown.map(x=>x.amount)):1;
+  const trend=bs.spendTrend||[];
+  return `<div class="msec"><div class="msec-hd">Budget Summary</div>
+    <div class="kpi-row">
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${fmtR(bs.allocatedMonthly,true)}</div><div class="kpi-l">Monthly Budget</div></div>
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${bs.spentThisPeriod?fmtR(bs.spentThisPeriod,true):'—'}</div><div class="kpi-l">Period Spend</div></div>
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${bs.utilisedPct?`${bs.utilisedPct}%`:'—'}</div><div class="kpi-l">Utilised</div></div>
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${bs.cumulativeSurplus?fmtR(bs.cumulativeSurplus,true):'—'}</div><div class="kpi-l">Cumulative Surplus</div></div>
+    </div>
+  </div>
+  ${breakdown.length?`<div class="msec"><div class="msec-hd">Channel Breakdown</div>
+    ${breakdown.map(b=>hBarRow(b.channel,b.amount,maxA,'var(--blue)',fmtR(b.amount,true))).join('')}
+  </div>`:''}
+  ${trend.length>1?`<div class="msec"><div class="msec-hd">Monthly Spend Trend</div>
+    ${sparkLine(trend.map(t=>t.spent),'#2e5d93')}
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-light);margin-top:4px"><span>${ms(trend[0]?.month||'')}</span><span>${ms(trend[trend.length-1]?.month||'')}</span></div>
+  </div>`:''}
+  ${bs.insight?`<div class="callout blue">${bs.insight}</div>`:''}
+  ${hlBox(d)}`;
+}
+
+function dmNewsletterModal(d){
+  const nl=d.newsletter||{},trend=nl.trend||[],or=nv(nl.openRate),bm=nv(nl.benchmark)||45;
+  return `<div class="msec"><div class="msec-hd">Newsletter Performance</div>
+    <div class="kpi-row" style="align-items:center">
+      ${donutSvg(Math.min(100,or),or>=bm?'var(--green)':'var(--amber)',80)}
+      <div class="kpi-chip ${or>=bm?'kpi-green':'kpi-amber'}" style="flex:1"><div class="kpi-v">${or?`${or}%`:'—'}</div><div class="kpi-l">Open Rate</div><div class="kpi-s">Benchmark: ${bm}%</div></div>
+    </div>
+  </div>
+  ${trend.length>1?`<div class="msec"><div class="msec-hd">Open Rate Trend</div>
+    ${sparkLine(trend.map(t=>t.rate),or>=bm?'#0a6b6f':'#b8692e')}
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-light);margin-top:4px"><span>${ms(trend[0]?.month||'')}</span><span>${ms(trend[trend.length-1]?.month||'')}</span></div>
+  </div>`:''}
+  <div class="callout ${or>=bm?'green':'amber'}">${or>=bm?'Above Benchmark':'Below Benchmark'} — ${or}% open rate vs ${bm}% industry benchmark.</div>
+  ${hlBox(d)}`;
+}
+
+function dmPortalsModal(d){
+  const pc=d.portalsChannels||{},portals=pc.portals||[];
+  return `<div class="msec"><div class="msec-hd">ORM & Ratings</div>
+    <div class="kpi-row">
+      <div class="kpi-chip ${nv(pc.merakiORM)>=4.5?'kpi-green':'kpi-amber'}"><div class="kpi-v">${pc.merakiORM||'—'}&#9733;</div><div class="kpi-l">Meraki ORM</div><div class="kpi-s">Target ${pc.targetORM||4.8}&#9733;</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${pc.cpBrokers||'—'}</div><div class="kpi-l">CP Brokers</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${pc.cpActive||'—'}</div><div class="kpi-l">Active This Period</div></div>
+    </div>
+  </div>
+  ${portals.length?`<div class="msec"><div class="msec-hd">Portal Status</div>
+    <table class="tbl"><tr><th>Portal</th><th>Status</th><th>Notes</th></tr>
+      ${portals.map(p=>`<tr><td>${p.name}</td><td><span class="${p.status==='Active'?'pill-done':'pill-pend'}">${p.status}</span></td><td>${p.notes||'—'}</td></tr>`).join('')}
+    </table>
+  </div>`:''}
+  ${pc.insight?`<div class="callout blue">${pc.insight}</div>`:''}
+  ${hlBox(d)}`;
+}
+
+// ===== LR MODALS =====
+function openLRModal(sec){
+  const d=S.data||{},pl=d.periodLabel||S.period;
+  const map={
+    land:['Land Tracker',lrLandModal],
+    meraki:['Meraki Tracker',lrMerakiModal],
+    assets:['Assets',lrAssetsModal],
+    pva:['Plan vs Achieved',lrPVAModal],
+    cases:['Cases',lrCasesModal],
+  };
+  const [title,fn]=map[sec]||['—',()=>''];
+  openModal(title,pl,fn(d));
+}
+
+function lrLandModal(d){
+  const lt=d.landTracker||{},items=lt.items||[];
+  return `<div class="msec"><div class="msec-hd">Summary</div>
+    <div class="kpi-row">
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${lt.totalParcels||'—'}</div><div class="kpi-l">Total Parcels</div></div>
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${safe(lt.regDone,'—')}</div><div class="kpi-l">Registration Done</div></div>
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${safe(lt.regPending,'—')}</div><div class="kpi-l">Reg Pending</div></div>
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${safe(lt.eKhataDone,'—')}</div><div class="kpi-l">E-Khata Done</div></div>
+    </div>
+  </div>
+  ${items.length?`<div class="msec"><div class="msec-hd">Land Parcels</div>
+    <div style="overflow-x:auto"><table class="tbl">
+      <tr><th>Parcel</th><th>Type</th><th>Registration</th><th>E-Khata</th><th>Blocker</th></tr>
+      ${items.map(it=>`<tr>
+        <td><strong>${it.parcel||'—'}</strong>${it.area?`<br><span style="font-size:10px;color:var(--text-light)">${it.area}</span>`:''}</td>
+        <td>${it.type||'—'}</td>
+        <td><span class="${it.regStatus==='Done'?'pill-done':'pill-pend'}">${it.regStatus||'—'}</span></td>
+        <td><span class="${it.eKhataStatus==='Done'?'pill-done':'pill-pend'}">${it.eKhataStatus||'—'}</span></td>
+        <td>${it.blocker||'—'}</td>
+      </tr>`).join('')}
+    </table></div>
+  </div>
+  ${items.filter(it=>(it.pendingItems||[]).length>0).length?`<div class="msec"><div class="msec-hd">Pending Actions</div>
+    ${items.filter(it=>(it.pendingItems||[]).length>0).map(it=>`<div style="margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:4px">${it.parcel}</div>
+      ${(it.pendingItems||[]).map(pi=>`<div class="callout amber" style="margin-bottom:4px;font-size:11px">${pi}</div>`).join('')}
+    </div>`).join('')}
+  </div>`:''}
+  `:'<div class="callout grey">Land parcel data will appear after generating the report.</div>'}
+  ${hlBox(d)}`;
+}
+
+function lrMerakiModal(d){
+  const mt=d.merakiTracker||{},items=mt.items||[];
+  return `<div class="msec"><div class="msec-hd">Approval Summary</div>
+    <div class="kpi-row">
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${safe(mt.done,'—')}</div><div class="kpi-l">Received</div></div>
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${safe(mt.pending,'—')}</div><div class="kpi-l">Pending</div></div>
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${safe(mt.total,'—')}</div><div class="kpi-l">Total Items</div></div>
+    </div>
+    ${mt.total?`<div style="margin-top:12px">${hBarRow('Complete',nv(mt.done),nv(mt.total)||1,'var(--green)',`${mt.done||0}/${mt.total||0}`)}</div>`:''}
+  </div>
+  ${items.length?`<div class="msec"><div class="msec-hd">All Approval Items</div>
+    <div style="overflow-x:auto"><table class="tbl">
+      <tr><th>Item</th><th>Authority</th><th>Applied</th><th>Received</th><th>Notes</th></tr>
+      ${items.map(it=>`<tr>
+        <td>${it.item||'—'}</td><td>${it.authority||'—'}</td>
+        <td>${it.applied?'<span class="pill-done">Yes</span>':'<span class="pill-na">No</span>'}</td>
+        <td>${it.received?'<span class="pill-done">Done</span>':'<span class="pill-pend">Pending</span>'}</td>
+        <td>${it.notes||'—'}</td>
+      </tr>`).join('')}
+    </table></div>
+  </div>`:''}
+  ${hlBox(d)}`;
+}
+
+function lrAssetsModal(d){
+  const as=d.assets||{},items=as.items||[];
+  const mgmtI=items.filter(x=>x.mgmtRequired);
+  return `<div class="msec"><div class="msec-hd">Asset Summary</div>
+    <div class="kpi-row">
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${safe(as.total,'—')}</div><div class="kpi-l">Total</div></div>
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${safe(as.inProgress,'—')}</div><div class="kpi-l">In Progress</div></div>
+      <div class="kpi-chip kpi-amber"><div class="kpi-v">${safe(as.mgmtDecisionsRequired,'—')}</div><div class="kpi-l">Mgmt Decisions</div></div>
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${safe(as.completed,'—')}</div><div class="kpi-l">Completed</div></div>
+    </div>
+  </div>
+  ${mgmtI.length?`<div class="msec"><div class="msec-hd">Management Decisions Required</div>
+    ${mgmtI.map(it=>`<div class="callout amber" style="margin-bottom:8px"><strong>${it.asset}</strong><br>${it.currentStatus||''}<br><em style="font-size:11px">${it.nextAction||''}</em></div>`).join('')}
+  </div>`:''}
+  ${items.length?`<div class="msec"><div class="msec-hd">All Assets</div>
+    <div style="overflow-x:auto"><table class="tbl">
+      <tr><th>Asset</th><th>Category</th><th>Status</th><th>Current Status</th><th>Next Action</th></tr>
+      ${items.map(it=>`<tr>
+        <td><strong>${it.asset||'—'}</strong>${it.mgmtRequired?'&nbsp;<span class="pill-pend">Mgmt</span>':''}</td>
+        <td>${it.category||'—'}</td>
+        <td><span class="${it.decisionStatus==='Completed'?'pill-done':'pill-pend'}">${it.decisionStatus||'—'}</span></td>
+        <td style="max-width:180px">${it.currentStatus||'—'}</td>
+        <td>${it.nextAction||'—'}</td>
+      </tr>`).join('')}
+    </table></div>
+  </div>`:''}
+  ${hlBox(d)}`;
+}
+
+function lrPVAModal(d){
+  const pva=d.planVsAchieved||{},metrics=pva.metrics||[];
+  return `<div class="msec"><div class="msec-hd">Plan vs Achieved — ${pva.period||''}</div>
+    <div class="kpi-row" style="align-items:center">
+      ${donutSvg(nv(pva.avgPct),nv(pva.avgPct)>=90?'var(--green)':'var(--amber)',80)}
+      <div class="kpi-chip ${nv(pva.avgPct)>=90?'kpi-green':nv(pva.avgPct)>=70?'kpi-amber':'kpi-red'}" style="flex:1"><div class="kpi-v">${pva.avgPct||'—'}%</div><div class="kpi-l">Avg Achievement</div></div>
+    </div>
+  </div>
+  ${metrics.length?`<div class="msec"><div class="msec-hd">Metric Detail</div>
+    <div style="overflow-x:auto"><table class="tbl">
+      <tr><th>Metric</th><th>Planned</th><th>Actual</th><th>%</th><th>Status</th></tr>
+      ${metrics.map(m=>`<tr>
+        <td>${m.metric||'—'}</td><td>${safe(m.planned,'—')}</td><td>${safe(m.actual,'—')}</td>
+        <td><strong>${safe(m.pct,'—')}%</strong></td>
+        <td><span class="${m.status==='On Track'||m.status==='Met'?'pill-done':'pill-pend'}">${m.status||'—'}</span></td>
+      </tr>${m.notes?`<tr><td colspan="5" style="color:var(--text-light);font-size:11px;padding-top:2px">${m.notes}</td></tr>`:''}`).join('')}
+    </table></div>
+    <div style="margin-top:14px">
+      ${metrics.map(m=>hBarRow((m.metric||'').slice(0,35),nv(m.pct),100,nv(m.pct)>=90?'var(--green)':nv(m.pct)>=70?'var(--amber)':'var(--red)',`${m.pct||0}%`)).join('')}
+    </div>
+  </div>`:''}
+  ${hlBox(d)}`;
+}
+
+function lrCasesModal(d){
+  const cs=d.cases||{},items=cs.items||[];
+  return `<div class="msec"><div class="msec-hd">Cases Summary</div>
+    <div class="kpi-row">
+      <div class="kpi-chip kpi-blue"><div class="kpi-v">${safe(cs.total,'—')}</div><div class="kpi-l">Total</div></div>
+      <div class="kpi-chip kpi-red"><div class="kpi-v">${safe(cs.active,'—')}</div><div class="kpi-l">Active / Pending</div></div>
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${safe(cs.settled,'—')}</div><div class="kpi-l">Settled</div></div>
+      <div class="kpi-chip kpi-green"><div class="kpi-v">${safe(cs.disposed,'—')}</div><div class="kpi-l">Disposed</div></div>
+    </div>
+  </div>
+  ${items.length?`<div class="msec"><div class="msec-hd">All Cases</div>
+    <div style="overflow-x:auto"><table class="tbl">
+      <tr><th>#</th><th>Property</th><th>Party / Case</th><th>Status</th><th>Next Hearing</th><th>Current Status</th></tr>
+      ${items.map(it=>`<tr>
+        <td>${it.slNo||'—'}</td>
+        <td>${it.property||'—'}</td>
+        <td>${it.party||'—'}<br><span style="font-size:10px;color:var(--text-light)">${it.caseNo||''}</span></td>
+        <td><span class="${it.status==='Settled'||it.status==='Disposed'?'pill-done':it.status==='Active'||it.status==='Pending'?'pill-active':'pill-na'}">${it.status||'—'}</span></td>
+        <td>${it.nextHearing||'—'}</td>
+        <td>${it.currentStatus||'—'}</td>
+      </tr>`).join('')}
+    </table></div>
+  </div>`:''}
+  ${hlBox(d)}`;
+}
+
+// ===== MODAL SYSTEM =====
+function openModal(title,periodLabel,content){
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalPeriod').textContent=periodLabel||'';
+  document.getElementById('modalBody').innerHTML=content;
+  document.getElementById('modalOverlay').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+
+function closeModal(e){
+  if(e&&e.currentTarget!==document.getElementById('modalOverlay')) return;
+  document.getElementById('modalOverlay').style.display='none';
+  document.body.style.overflow='';
+}
+
+// ===== LOADING =====
+function showLoading(step,sub){
+  document.getElementById('loadingStep').innerHTML=step;
+  document.getElementById('loadingSub').textContent=sub||'';
+  document.getElementById('loadingOverlay').style.display='flex';
+}
+function hideLoading(){document.getElementById('loadingOverlay').style.display='none';}
+
+// ===== CACHE =====
+function cKey(dept,period){return `fenxi_v3_${dept}_${period}`;}
+function saveCache(dept,period,data){try{localStorage.setItem(cKey(dept,period),JSON.stringify({data,ts:Date.now()}));}catch(e){}}
+function loadCache(dept,period){
+  try{const r=localStorage.getItem(cKey(dept,period));if(!r)return null;const{data,ts}=JSON.parse(r);if(Date.now()-ts>24*3600*1000)return null;return data;}catch(e){return null;}
+}
+
+// ===== API =====
+async function fetchSheets(dept){
+  const r=await fetch(`/api/sheets?dept=${dept}`);
+  if(!r.ok) throw new Error(`Sheets error: ${r.status}`);
+  return r.json();
+}
+async function analyzeData(rawSheets,dept,period,periodMonths){
+  const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rawSheets,dept,period,periodMonths})});
+  if(!r.ok) throw new Error(`Analyze error: ${r.status}`);
+  return r.json();
+}
+
+// ===== NAVIGATION =====
+function goHome(){
+  S.dept=null;S.data=null;S.period=null;
+  document.getElementById('homeView').style.display='';
+  document.getElementById('dashView').style.display='none';
+  updateNav();
+  renderHome();
+}
+
+function selectDept(dept){
+  S.dept=dept;S.data=null;S.period=null;S.mode='quarter';
+  document.getElementById('homeView').style.display='none';
+  document.getElementById('dashView').style.display='';
+  updateNav();
+  renderPeriodBar();
+  renderCards();
+  renderFooter();
+}
+
+function updateNav(){
+  const crumb=document.getElementById('navCrumb');
+  const acts=document.getElementById('navActions');
+  if(!S.dept){crumb.innerHTML='';acts.innerHTML='';return;}
+  const d=DEPTS[S.dept];
+  crumb.innerHTML=`<button class="nav-back" onclick="goHome()">&#8592; Home</button>
+    <span class="sep">›</span><span class="active">${d.name}</span>
+    ${S.period?`<span class="sep">›</span><span>${S.period}</span>`:''}`;
+  acts.innerHTML=S.data?`<button class="nav-export" onclick="window.print()">Export PDF</button>`:'';
+}
+
+// ===== PERIOD BAR =====
+function selectMode(mode){S.mode=mode;S.period=null;S.periodMonths=[];renderPeriodBar();}
+function selectPeriod(pid,months){
+  S.period=pid;S.periodMonths=months;
+  renderPeriodBar();updateNav();
+}
+
+function renderPeriodBar(){
+  const pills=PERIODS[S.mode]||[];
+  const modeH=['quarter','month','year'].map(m=>
+    `<button class="mode-tab ${S.mode===m?'active':''}" onclick="selectMode('${m}')">${m==='quarter'?'Quarters':m==='month'?'Months':'Full Year'}</button>`
   ).join('');
+  const pillsH=pills.map(p=>{
+    const active=S.period===p.id;
+    const cached=loadCache(S.dept,p.id);
+    return `<button class="period-pill ${active?'active':''}" onclick="selectPeriod('${p.id}',${JSON.stringify(p.months)})">${p.label}${p.sub?`<span class="pill-sub">${p.sub}</span>`:''}${cached&&!active?'<span style="font-size:9px;opacity:.55"> cached</span>':''}</button>`;
+  }).join('');
+  const hasCached=S.period&&loadCache(S.dept,S.period);
+  document.getElementById('periodBar').innerHTML=`
+    <div class="mode-tabs">${modeH}</div>
+    <div class="period-pills" style="flex:1">${pillsH}</div>
+    <button class="gen-btn ${hasCached?'cached':''}" id="genBtn" onclick="generate()" ${!S.period?'disabled':''}>
+      ${hasCached?'Refresh':'Generate'}
+    </button>`;
 }
 
-// ── CACHE ─────────────────────────────────────────────────────────────────────
-function saveCache(period, combined) {
-  try { localStorage.setItem(CACHE_KEY+'_'+period, JSON.stringify({combined,ts:Date.now()})); } catch(e){}
-}
-function loadCache(period) {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY+'_'+period);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    // Support both old format {data,insights} and new format {combined}
-    return parsed.combined || null;
-  } catch(e) { return null; }
-}
-
-function showToast() {
-  const t=document.getElementById('updateToast');
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
+// ===== GENERATE =====
+async function generate(){
+  if(!S.dept||!S.period) return;
+  S.loading=true;
+  try{
+    showLoading(`Connecting to Sheets<span class="ldots"></span>`,`Fetching ${DEPTS[S.dept].name} data`);
+    const rawSheets=await fetchSheets(S.dept);
+    showLoading(`Analysing with AI<span class="ldots"></span>`,`Building insights for ${S.period}`);
+    const data=await analyzeData(rawSheets,S.dept,S.period,S.periodMonths);
+    S.data=data;
+    saveCache(S.dept,S.period,data);
+    updateNav();renderPeriodBar();renderCards();renderFooter();
+  }catch(err){
+    alert('Error: '+err.message+'\n\nEnsure Google Sheets are shared with the service account and Vercel env vars are set (GOOGLE_SHEET_ID_FM, GOOGLE_SHEET_ID_DM, GOOGLE_SHEET_ID_LR).');
+  }finally{S.loading=false;hideLoading();}
 }
 
-// ── GENERATE ──────────────────────────────────────────────────────────────────
-const EMPTY_COMBINED = {
-  period:'', type:'', periodLabel:'', periodDates:'', months:[], fetchTime:'',
-  handover:    { handedOver:[], occupied:[], totalHandedOver:0, totalOccupied:0, occupancyRate:0, benchmarkRate:60 },
-  maintenance: { costPerSqft:[], avgCostPerSqft:0, goalLine:5, invoicesSent:[], totalInvoices:0 },
-  tickets:     { received:[], closed:[], totalReceived:0, totalClosed:0, resolutionRate:0, prevTotalReceived:0, categories:[], categoriesNote:'' },
-  expenses:    { total:0, perMonth:[], events:[], security:[], pest:[], lineItems:[] },
-  works:       { eastBlock:{done:0,total:0,pct:0}, southBlock:{done:0,total:0,pct:0}, ideas:{done:0,total:0} },
-  sustainability: [],
-  previous:    { occupancyRate:0, totalOccupied:0, totalHandedOver:0, avgCostPerSqft:0, totalExpenses:0, totalReceived:0, resolutionRate:0 },
-  healthScore: 0, healthScoreTrend: '—',
-  periodNarrative: 'FM data loaded.',
-  highlights: { win:'Report loaded.', risk:'Regenerate for AI insights.', action:'Click Generate to refresh.' },
-  coverSummary: 'FM data loaded.',
-  goals: [],
-  goalsTrend: 'Analysis unavailable.',
-  ticketAnalysis: { volumeResolution:'Analysis unavailable.', topIssues:'Analysis unavailable.', pattern:'Analysis unavailable.', action:'Analysis unavailable.' },
-  ticketsInsight: 'Analysis unavailable.',
-  expenseAnalysis: { totalSplit:'Security fixed at ~₹1.11L/month; analysis unavailable.', variableDrivers:'Analysis unavailable.', trendWatch:'Analysis unavailable.' },
-  expensesInsight: 'Security fixed at ~₹1.11L/month; analysis unavailable.',
-  operationsSummary: 'Analysis unavailable.',
-  operationsInsight: 'Analysis unavailable.',
-  sustainabilityNotes: {
-    heatPump:            {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
-    hasirudala:          {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
-    solar:               {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
-    ecoSTP:              {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
-    waterTreatment:      {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
-    implementationIdeas: {status:'Partial',note:'Status pending.',nextAction:'Regenerate for details.'},
-  },
-  memo: { point1:'—', point2:'—', point3:'—', point4:'—', point5:'—' },
-};
-
-async function generateReport(background=false) {
-  const btn = document.getElementById('generateBtn');
-
-  if (!background) {
-    btn.disabled=true; btn.textContent='Generating…';
-    showLoading();
-    setStep(1);
-  }
-
-  let rawSheets = null;
-  let combined  = { ...EMPTY_COMBINED };
-
-  // Step 1: connect and fetch raw sheets
-  try {
-    const r = await fetch('/api/sheets');
-    rawSheets = r.ok ? await r.json() : null;
-  } catch(e) { console.warn('Sheets fetch error:', e); }
-
-  if (!background) setStep(2);
-
-  // Step 2: read facility data (already fetched)
-  if (!background) setStep(3);
-
-  // Step 3: analyse with AI
-  if (rawSheets && !rawSheets.error) {
-    try {
-      const ar = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawSheets, period: selectedPeriod, type: selectedType }),
-      });
-      if (ar.ok) {
-        const ai = await ar.json();
-        if (ai && !ai._error && !ai._parseError) combined = ai;
-        else combined = { ...EMPTY_COMBINED, ...ai };
-      }
-    } catch(e) { console.warn('Analyze error (non-fatal):', e); }
-  }
-
-  // Inject period + type into combined (in case Haiku omitted them)
-  combined.period = selectedPeriod;
-  combined.type   = selectedType;
-  if (!combined.periodLabel) combined.periodLabel = selectedPeriod;
-  if (!combined.periodDates) combined.periodDates = selectedPeriod;
-
-  if (!background) setStep(4);
-  saveCache(selectedPeriod, combined);
-
-  currentData     = combined;
-  currentInsights = combined;
-  visibleSlides   = buildVisible(combined);
-  currentSlide    = 0;
-
-  renderAll(combined, combined);
-  rebuildDots();
-
-  if (!background) {
-    hideLoading();
-    showSlide(0);
-    btn.disabled=false;
-    btn.textContent='Generate →';
-  } else {
-    renderAll(combined, combined);
-    rebuildDots();
-    showSlide(currentSlide);
-    showToast();
-  }
+function renderCards(){document.getElementById('cardGrid').innerHTML=buildCards(S.dept,S.data);}
+function renderFooter(){
+  const ft=document.getElementById('dashFooter');
+  if(S.data?.fetchTime){const t=new Date(S.data.fetchTime).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});ft.innerHTML=`Data from Google Sheets · ${t} · AI analysis by Claude Haiku`;}
+  else ft.innerHTML=S.dept?`${DEPTS[S.dept].name} — select a period and click Generate`:'';
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  // Build default period selector (quarterly mode, Q1 2026 selected)
-  setMode('quarterly');
-  // Restore last active pill to Q1 2026
-  document.querySelectorAll('.period-pill').forEach(p => {
-    p.classList.toggle('active', p.textContent.includes('Q1 2026'));
-  });
-  selectedPeriod = 'Q1 2026';
-  selectedType   = 'quarter';
+// ===== HOME =====
+function renderHome(){
+  document.getElementById('homeView').innerHTML=`
+    <div class="home-view">
+      <div class="home-hero">
+        <h1>Fenxi Analytics</h1>
+        <p>Select a department to view the monthly or quarterly report</p>
+      </div>
+      <div class="dept-grid">
+        <div class="dept-card" onclick="selectDept('fm')">
+          <div class="dept-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          <h2>FM</h2><p>Facility Management</p>
+          <span class="dept-tag">Handover · Complaints · Expenses</span>
+        </div>
+        <div class="dept-card dept-dm" onclick="selectDept('dm')">
+          <div class="dept-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg></div>
+          <h2>DM</h2><p>Digital Marketing</p>
+          <span class="dept-tag">Leads · Social · Budget</span>
+        </div>
+        <div class="dept-card dept-lr" onclick="selectDept('lr')">
+          <div class="dept-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L3 7v4c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7L12 2z"/></svg></div>
+          <h2>L&amp;R</h2><p>Legal &amp; Regulatory</p>
+          <span class="dept-tag">Land · Meraki · Cases</span>
+        </div>
+      </div>
+    </div>`;
+}
 
-  // Try to load from cache immediately, then refresh in background
-  const cached = loadCache(selectedPeriod);
-  if (cached) {
-    currentData     = cached;
-    currentInsights = cached;
-    visibleSlides   = buildVisible(cached);
-    currentSlide    = 0;
-    renderAll(cached, cached);
-    rebuildDots();
-    showSlide(0);
-    setTimeout(() => generateReport(true), 100);
-  } else {
-    generateReport(false);
-  }
-});
+// ===== KEYBOARD =====
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal({currentTarget:document.getElementById('modalOverlay')});});
+
+// ===== INIT =====
+renderHome();
 </script>
 </body>
 </html>
