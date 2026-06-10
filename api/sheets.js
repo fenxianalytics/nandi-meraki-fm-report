@@ -59,10 +59,10 @@ async function getAccessToken() {
   return t.access_token;
 }
 
-function rowsToText(rows, maxRows = 80) {
+function rowsToText(rows, maxRows = 200) {
   return rows
     .slice(0, maxRows)
-    .map(row => row.map(cell => String(cell ?? '').replace(/\n/g, ' ').slice(0, 150)).join(' | '))
+    .map(row => row.map(cell => String(cell ?? '').replace(/\n/g, ' ').slice(0, 300)).join(' | '))
     .filter(line => line.replace(/\|/g, '').trim())
     .join('\n');
 }

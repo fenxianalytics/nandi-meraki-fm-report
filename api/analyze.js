@@ -409,7 +409,7 @@ export default async function handler(req, res) {
 
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 8000,
+      max_tokens: 10000,
       system: SYSTEMS[dept],
       messages: [{ role: 'user', content: prompt }],
     });
@@ -421,10 +421,22 @@ export default async function handler(req, res) {
     try {
       result = JSON.parse(json);
     } catch {
-      try {
-        result = JSON.parse(json + '"}}}');
-      } catch {
-        console.error('JSON parse failed. Raw start:', raw.slice(0, 500));
+      // Try to close truncated JSON by counting open braces/brackets
+      const opens = (json.match(/[{[]/g) || []).length;
+      const closes = (json.match(/[}\]]/g) || []).length;
+      const diff = opens - closes;
+      if (diff > 0) {
+        // Strip trailing incomplete string/value then close all open containers
+        const trimmed = json.replace(/,?\s*"[^"]*$/, '').replace(/,\s*$/, '');
+        const closing = '}'.repeat(Math.min(diff, 10));
+        try {
+          result = JSON.parse(trimmed + closing);
+        } catch {
+          console.error('JSON repair failed. Raw:', raw.slice(0, 300));
+          return res.status(200).json({ ...fallback, periodLabel: period, _parseError: true });
+        }
+      } else {
+        console.error('JSON parse failed. Raw:', raw.slice(0, 300));
         return res.status(200).json({ ...fallback, periodLabel: period, _parseError: true });
       }
     }
